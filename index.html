@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>מרכז דרור — ניהול טיפול ומעקב מטופלים (v7.0)</title>
+  <title>מרכז דרור — ניהול טיפול ומעקב מטופלים (v8.0)</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,47 +17,31 @@
       font-family: 'Heebo', Arial, sans-serif !important; 
       -webkit-tap-highlight-color: transparent;
     }
-    body {
-      font-size: 14px;
-      color: #020617;
-    }
-    button, select, input, a {
-      touch-action: manipulation;
-    }
+    body { font-size: 14px; color: #020617; }
+    button, select, input, textarea { touch-action: manipulation; }
     .rtl { direction: rtl; text-align: right; }
     .ltr { direction: ltr; text-align: left; }
     ::-webkit-scrollbar { width: 7px; height: 7px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
     
     @media print {
-      @page {
-        size: A4 portrait;
-        margin: 12mm;
-      }
+      @page { size: A4 portrait; margin: 12mm; }
       body { background: white !important; font-size: 11pt; color: black !important; direction: rtl; }
       .no-print { display: none !important; }
       .print-only { display: block !important; }
-      .page-break { 
-        page-break-after: always; 
-        break-after: page; 
-        min-height: 260mm; 
-        display: flex; 
-        flex-direction: column; 
-        justify-content: space-between; 
-        box-sizing: border-box;
-      }
+      .page-break { page-break-after: always; break-after: page; min-height: 260mm; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
     }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen flex flex-col rtl">
 
-  <!-- ========================================================================= -->
-  <!-- ШАПКА: С ЯВНОЙ ВЕРСИЕЙ И КРУПНЫМИ КНОПКАМИ ДЛЯ СЕНСОРНЫХ ЭКРАНОВ -->
-  <!-- ========================================================================= -->
+  <!-- ВСПЛЫВАЮЩЕЕ УВЕДОМЛЕНИЕ О СОХРАНЕНИИ В GOOGLE SHEETS -->
+  <div id="saveNotificationToast" style="display: none;" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-xl text-xs font-black flex items-center gap-2 border transition-all duration-300"></div>
+
+  <!-- ШАПКА -->
   <header class="bg-indigo-950 text-white shadow-md sticky top-0 z-30 no-print">
     <div class="max-w-7xl mx-auto px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
       
-      <!-- Верхний ряд шапки: Название + ЯВНЫЙ НОМЕР ВЕРСИИ -->
       <div class="flex items-center justify-between sm:justify-start gap-3">
         <div class="flex items-center gap-2.5">
           <div class="bg-indigo-800 p-2 rounded-xl text-emerald-400">
@@ -66,24 +50,20 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="font-black text-sm sm:text-base leading-tight">מרכז דרור — ניהול טיפול ומעקב</h1>
-              <!-- ВИДНАЯ МЕТКА ВЕРСИИ НА САЙТЕ -->
               <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black font-mono shadow-sm">
-                v7.0 (10/09/2026)
+                v8.0
               </span>
             </div>
             <div class="flex items-center gap-2 text-xs text-indigo-300 font-medium">
-              <span>ד"ר יעקובא מקסים | דרור חיפה — אופיר 45</span>
+              <span>ד"ר יעקובא מקסים | דרור חיפה</span>
               <span id="backendStatusBadge" class="text-[10px] px-2 py-0.2 rounded-full bg-amber-500/30 text-amber-200 font-mono font-bold">מצב מקומי</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Нижний ряд шапки (кнопки с крупной зоной нажатия) -->
       <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2">
-        
-        <!-- Выбор клиники -->
-        <div class="flex items-center gap-1.5 bg-indigo-900/90 p-1 rounded-xl text-xs">
+        <div class="flex items-center gap-1 bg-indigo-900/90 p-1 rounded-xl text-xs">
           <label class="text-indigo-200 font-bold px-1">מרפאה:</label>
           <select id="clinicFilterSelect" onchange="changeClinicFilter(this.value)" class="bg-indigo-950 text-white font-bold rounded-lg px-2.5 py-1.5 border border-indigo-700 focus:outline-none">
             <option value="ALL">כל המרפאות (הכל)</option>
@@ -93,80 +73,220 @@
           </select>
         </div>
 
-        <!-- Кнопка 1: Пакетная печать рецептов -->
-        <button id="btnHeaderBatchRx" type="button" class="bg-purple-600 active:bg-purple-700 hover:bg-purple-500 text-white px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow min-h-[38px]">
+        <button onclick="openPatientsTableModal()" class="bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow">
+          <i class="ph-bold ph-users text-base"></i> <span>טבלת מטופלים</span>
+        </button>
+
+        <button onclick="openBatchPrintModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow">
           <i class="ph-bold ph-printer text-base"></i> <span>הנפקת מרשמים</span>
         </button>
 
-        <!-- Кнопка 2: Журнал рецептов -->
-        <button id="btnHeaderRxLog" type="button" class="bg-indigo-800 active:bg-indigo-900 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 min-h-[38px]">
+        <button onclick="openPrescriptionLogModal()" class="bg-indigo-900 hover:bg-indigo-800 text-white px-2.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
           <i class="ph-bold ph-book-open-text text-base"></i> <span>יומן</span>
         </button>
 
-        <!-- Кнопка 3: ШЕСТЕРЕНКА НАСТРОЕК (Крупная, яркая) -->
-        <button id="btnHeaderSettings" type="button" title="הגדרות וסנכרון" class="bg-amber-500 active:bg-amber-600 hover:bg-amber-400 text-slate-950 p-2 rounded-xl text-base font-black shadow flex items-center justify-center min-w-[38px] min-h-[38px]">
+        <button onclick="openSettingsModal()" title="הגדרות וסנכרון" class="bg-amber-500 hover:bg-amber-400 text-slate-950 p-2 rounded-xl text-base font-black shadow flex items-center justify-center min-w-[38px] min-h-[38px]">
           <i class="ph-bold ph-gear text-lg"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ОСНОВНОЙ КОНТЕНТ -->
+  <!-- ОСНОВНОЙ ЭКРАН (ДВУХСТОРОННИЙ) -->
   <main class="max-w-7xl mx-auto px-3 py-3 w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 no-print">
 
-    <!-- ЛЕВАЯ КОЛОНКА (РАСПИСАНИЕ) -->
+    <!-- ЛЕВАЯ КОЛОНКА: ОЧЕРЕДЬ И ТОР ПАИЛЬ (5 колонок) -->
     <section class="lg:col-span-5 flex flex-col gap-2.5">
       <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-300">
-        
-        <!-- ДУБЛИРУЮЩАЯ КНОПКА НАСТРОЕК (НА СЛУЧАЙ, ЕСЛИ НА ТЕЛЕФОНЕ НЕ СРАБОТАЕТ ШАПКА) -->
-        <div class="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-200">
-          <span class="text-xs font-black text-indigo-950">לוח תורים וביקורים</span>
-          <button id="btnDuplicateSettings" type="button" class="bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-300">
-            <i class="ph-bold ph-gear text-indigo-600"></i> הגדרות וסנכרון Sheets
-          </button>
-        </div>
-
         <div class="relative">
           <i class="ph-bold ph-magnifying-glass absolute right-3 top-3 text-slate-500 text-base"></i>
           <input 
             type="text" 
             id="searchInput" 
+            oninput="renderScheduleList()"
             placeholder="חיפוש לפי שם, ת.ז., טלפון..." 
             class="w-full pr-9 pl-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-950 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
         </div>
 
-        <div class="flex items-center justify-between gap-1 mt-3 pt-2 border-t border-slate-200 text-xs">
+        <div class="flex items-center justify-between gap-1 mt-3 pt-2.5 border-t border-slate-200 text-xs">
           <div class="flex gap-1">
-            <button id="tab-ACTIVE" type="button" class="px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-950 font-black">תור פעיל</button>
-            <button id="tab-ALL_HISTORY" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">היסטוריה (הכל)</button>
-            <button id="tab-ARCHIVE" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">סיימו טיפול</button>
+            <button onclick="setScheduleTab('ACTIVE')" id="tab-ACTIVE" class="px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-950 font-black">תור פעיל</button>
+            <button onclick="setScheduleTab('ALL_HISTORY')" id="tab-ALL_HISTORY" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">היסטוריה (הכל)</button>
+            <button onclick="setScheduleTab('ARCHIVE')" id="tab-ARCHIVE" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200">סיימו טיפול</button>
           </div>
-          <button id="btnNewPatient" type="button" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1.5 rounded-lg font-black text-xs flex items-center gap-1">
+          <button onclick="openNewPatientModal()" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1.5 rounded-lg font-black text-xs flex items-center gap-1">
             <i class="ph-bold ph-plus"></i> מטופל חדש
           </button>
         </div>
       </div>
 
-      <div id="scheduleContainer" class="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-230px)] pl-1"></div>
+      <!-- Список визитов с расчетом запаса лекарств -->
+      <div id="scheduleContainer" class="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-210px)] pl-1"></div>
     </section>
 
-    <!-- ПРАВАЯ КОЛОНКА (КАРТОЧКА ПАЦИЕНТА) -->
+    <!-- ПРАВАЯ КОЛОНКА: УПРАВЛЕНИЕ ВИЗИТОМ И НАЗНАЧЕНИЯМИ (7 колонок) -->
     <section class="lg:col-span-7 flex flex-col gap-3">
       <div id="patientViewContainer" class="bg-white rounded-2xl shadow-sm border border-slate-300 p-4 sm:p-5 flex-1 flex flex-col"></div>
     </section>
 
   </main>
 
-  <!-- ПОДВАЛ С НОМЕРОМ ВЕРСИИ -->
+  <!-- ПОДВАЛ -->
   <footer class="bg-slate-200 border-t border-slate-300 py-2 px-4 text-center text-xs text-slate-600 no-print flex flex-wrap justify-between items-center max-w-7xl mx-auto w-full">
     <span>מרכז דרור חיפה — טיפול בהתמכרויות וכאב</span>
-    <span class="font-mono font-bold text-slate-800" id="footerVersionDisplay">Frontend v7.0 | עודכן: 10/09/2026 18:30</span>
+    <span class="font-mono font-bold text-slate-800">v8.0 | שמירה אוטומטית בענן Google Sheets</span>
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- МОДАЛЬНОЕ ОКНО 1: ПАКЕТНАЯ ВЫПИСКА РЕЦЕПТОВ (СО ВСЕМИ ПАЦИЕНТАМИ) -->
+  <!-- МОДАЛЬНОЕ ОКНО 1: СВОДНАЯ ТАБЛИЦА ВСЕХ ПАЦИЕНТОВ ДЛЯ РЕДАКТИРОВАНИЯ -->
   <!-- ========================================================================= -->
+  <div id="patientsTableModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden text-xs">
+      <div class="bg-indigo-950 text-white px-5 py-3.5 flex justify-between items-center">
+        <div>
+          <h3 class="font-black text-base flex items-center gap-2">
+            <i class="ph-bold ph-users text-lg text-emerald-400"></i> טבלת ניהול ועריכת כל המטופלים
+          </h3>
+          <p class="text-xs text-indigo-200">צפייה ועריכה של פרטי המטופל, טלפון, אבחנה, תאריך לידה ומרפאה</p>
+        </div>
+        <button onclick="closeModalDirect('patientsTableModal')" class="text-indigo-200 hover:text-white text-3xl font-bold p-1">&times;</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto flex-1 flex flex-col gap-3">
+        <div class="flex justify-between items-center gap-2">
+          <input type="text" id="patientTableSearchInput" oninput="renderPatientsTableRows()" placeholder="סינון בטבלה..." class="p-2 border border-slate-300 rounded-xl bg-slate-50 w-72 text-xs font-bold">
+          <button onclick="openNewPatientModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl font-black flex items-center gap-1 shadow">
+            <i class="ph-bold ph-plus"></i> הוסף מטופל חדש
+          </button>
+        </div>
+
+        <div class="border border-slate-300 rounded-xl overflow-hidden">
+          <table class="w-full border-collapse">
+            <thead class="bg-slate-200 text-slate-900 font-black">
+              <tr>
+                <th class="p-2.5 border-b text-right">שם המטופל</th>
+                <th class="p-2.5 border-b text-right">ת.ז.</th>
+                <th class="p-2.5 border-b text-right">טלפון</th>
+                <th class="p-2.5 border-b text-right">ת. לידה</th>
+                <th class="p-2.5 border-b text-right">מרפאה</th>
+                <th class="p-2.5 border-b text-right">אבחנה</th>
+                <th class="p-2.5 border-b text-center">סטטוס</th>
+                <th class="p-2.5 border-b text-center">פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="patientsFullTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-slate-100 px-5 py-3 flex justify-end border-t border-slate-300">
+        <button onclick="closeModalDirect('patientsTableModal')" class="px-5 py-2 bg-slate-300 text-slate-800 rounded-xl font-bold">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- МОДАЛЬНОЕ ОКНО 2: РЕДАКТИРОВАНИЕ ДАННЫХ ПАЦИЕНТА -->
+  <!-- ========================================================================= -->
+  <div id="editPatientModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 text-xs flex flex-col gap-3">
+      <h3 class="font-black text-sm text-indigo-950 flex items-center gap-1.5 border-b pb-2">
+        <i class="ph-bold ph-pencil text-base text-indigo-600"></i> עריכת פרטי מטופל
+      </h3>
+      <input type="hidden" id="editPatId">
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">שם מלא:</label>
+        <input type="text" id="editPatName" class="w-full p-2 border border-slate-300 rounded-xl font-bold bg-slate-50">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">ת.ז.:</label>
+          <input type="text" id="editPatTz" class="w-full p-2 border border-slate-300 rounded-xl font-mono bg-slate-50">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">תאריך לידה:</label>
+          <input type="text" id="editPatBirth" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">טלפון:</label>
+          <input type="text" id="editPatPhone" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">מרפאה:</label>
+          <select id="editPatClinic" class="w-full p-2 border border-slate-300 rounded-xl font-bold bg-slate-50">
+            <option value="מאוחדת">מאוחדת</option>
+            <option value="רמב&quot;ם">רמב"ם</option>
+            <option value="דרור חיפה">דרור חיפה</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">אבחנה והערות:</label>
+        <textarea id="editPatDiag" rows="2" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t">
+        <button onclick="closeModalDirect('editPatientModal')" class="px-4 py-2 text-slate-700 font-bold rounded-xl">ביטול</button>
+        <button onclick="savePatientEditForm()" class="px-5 py-2 bg-indigo-600 text-white font-black rounded-xl shadow">שמור וסנכרן</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- МОДАЛЬНОЕ ОКНО 3: РЕДАКТИРОВАНИЕ ЛЮБОГО ПРОШЛОГО ВИЗИТА -->
+  <!-- ========================================================================= -->
+  <div id="editVisitModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 text-xs flex flex-col gap-3">
+      <h3 class="font-black text-sm text-indigo-950 flex items-center gap-1.5 border-b pb-2">
+        <i class="ph-bold ph-pencil text-base text-purple-700"></i> עריכת ביקור בהיסטוריה
+      </h3>
+      <input type="hidden" id="editVisitId">
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">תאריך ביקור:</label>
+          <input type="date" id="editVisitDate" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-bold">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">שעה:</label>
+          <input type="text" id="editVisitTime" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-mono">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">סטטוס:</label>
+        <select id="editVisitStatus" class="w-full p-2 border border-slate-300 rounded-xl font-bold bg-slate-50">
+          <option value="DONE">התקיים (בוצע)</option>
+          <option value="MISSED">לא הגיע (דורש תיאום)</option>
+          <option value="SCHEDULED">מתוכנן</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">תכשירים ומינון:</label>
+        <input type="text" id="editVisitMed" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-bold">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">ימי כיסוי (ימים):</label>
+          <input type="number" id="editVisitDays" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-center bg-slate-50">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">מינון יומי (מ"ג):</label>
+          <input type="number" id="editVisitDailyMg" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-center bg-slate-50">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-slate-700 mb-1">הערות:</label>
+        <textarea id="editVisitNotes" rows="2" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t">
+        <button onclick="closeModalDirect('editVisitModal')" class="px-4 py-2 text-slate-700 font-bold rounded-xl">ביטול</button>
+        <button onclick="saveVisitEditForm()" class="px-5 py-2 bg-purple-700 text-white font-black rounded-xl shadow">שמור וסנכרן</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО 4: ПАКЕТНАЯ ВЫПИСКА РЕЦЕПТОВ -->
   <div id="batchPrintModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden text-xs">
       <div class="bg-purple-950 text-white px-5 py-3.5 flex justify-between items-center">
@@ -174,13 +294,12 @@
           <h3 class="font-black text-base flex items-center gap-2">
             <i class="ph-bold ph-printer text-lg text-purple-300"></i> הנפקת מרשמים מרוכזת (נוהל 155)
           </h3>
-          <p class="text-xs text-purple-200">סמן מטופלים להדפסה, סנן לפי מרפאה או תאריך ביקור</p>
+          <p class="text-xs text-purple-200">סמן מטופלים להדפסה מרוכזת בפורמט A4 לאורך</p>
         </div>
         <button onclick="closeModalDirect('batchPrintModal')" class="text-purple-200 hover:text-white text-3xl font-bold p-1">&times;</button>
       </div>
 
-      <div class="p-4 overflow-y-auto flex flex-col gap-3">
-        <!-- Панель фильтров -->
+      <div class="p-4 overflow-y-auto flex flex-col gap-3.5">
         <div class="flex flex-wrap items-center gap-3 bg-slate-100 p-3 rounded-xl border border-slate-300">
           <div class="flex items-center gap-1.5">
             <button onclick="setBatchFilterDate('TODAY')" id="btnFilterToday" class="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold">היום</button>
@@ -205,7 +324,6 @@
           </div>
         </div>
 
-        <!-- Таблица со всеми пациентами -->
         <div class="border border-slate-300 rounded-xl overflow-hidden">
           <table class="w-full border-collapse">
             <thead class="bg-slate-200 text-slate-900 font-black">
@@ -214,7 +332,7 @@
                 <th class="p-2.5 border-b text-right">שם המטופל</th>
                 <th class="p-2.5 border-b text-right">ת.ז.</th>
                 <th class="p-2.5 border-b text-right">מרפאה</th>
-                <th class="p-2.5 border-b text-right">תכשירים מנופקים (פילמים ומינונים)</th>
+                <th class="p-2.5 border-b text-right">תכשירים מנופקים</th>
                 <th class="p-2.5 border-b text-center w-24">ימים</th>
               </tr>
             </thead>
@@ -235,26 +353,24 @@
     </div>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- МОДАЛЬНОЕ ОКНО 2: НАСТРОЙКИ И ПОДКЛЮЧЕНИЕ К GOOGLE SHEETS -->
-  <!-- ========================================================================= -->
+  <!-- МОДАЛЬНОЕ ОКНО 5: НАСТРОЙКИ -->
   <div id="settingsModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 text-xs flex flex-col gap-4">
       <div class="flex justify-between items-center border-b pb-2">
         <h3 class="font-black text-sm text-indigo-950 flex items-center gap-2">
-          <i class="ph-bold ph-gear text-base text-indigo-600"></i> הגדרות וסנכרון Google Sheets
+          <i class="ph-bold ph-gear text-base text-indigo-600"></i> הגדרות וחיבור Google Sheets
         </h3>
         <button onclick="closeModalDirect('settingsModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
       </div>
 
       <div>
         <label class="block font-bold text-slate-800 mb-1">Google Apps Script Web App URL:</label>
-        <input type="text" id="settingsUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-mono ltr text-xs">
+        <input type="text" id="settingsUrlInput" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-mono ltr text-xs">
       </div>
 
       <div>
         <label class="block font-bold text-slate-800 mb-1">סיסמת גישה (Access Key):</label>
-        <input type="password" id="settingsKeyInput" placeholder="הכנס סיסמה" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-mono ltr text-xs">
+        <input type="password" id="settingsKeyInput" class="w-full p-2 border border-slate-300 rounded-xl bg-slate-50 font-mono ltr text-xs">
       </div>
 
       <div class="flex justify-between items-center pt-2 border-t border-slate-200">
@@ -266,43 +382,7 @@
     </div>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- МОДАЛЬНОЕ ОКНО 3: ОДИНОЧНЫЙ РЕЦЕПТ ДЛЯ ПАЦИЕНТА ИЗ КАРТОЧКИ -->
-  <!-- ========================================================================= -->
-  <div id="singleRxModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-5 text-xs flex flex-col gap-4">
-      <div class="flex justify-between items-center border-b pb-2">
-        <div>
-          <h3 class="font-black text-sm text-indigo-950 flex items-center gap-1.5">
-            <i class="ph-bold ph-printer text-base text-purple-700"></i> הנפקת מרשם סובוקסון פילם למטופל
-          </h3>
-          <p id="singleRxPatientDetails" class="text-slate-600 font-bold mt-0.5"></p>
-        </div>
-        <button onclick="closeModalDirect('singleRxModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
-      </div>
-
-      <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-300">
-        <label class="font-bold text-slate-800">תקופת טיפול (ימים):</label>
-        <input type="number" id="singleRxDays" value="28" class="w-16 p-1.5 border border-slate-300 rounded-lg text-center font-black bg-white">
-      </div>
-
-      <div class="border border-slate-300 rounded-xl p-3 bg-white">
-        <span class="font-bold text-slate-900 block mb-2">הרכב פילמים שנרשם להדפסה:</span>
-        <div id="singleRxFilmsList" class="flex flex-col gap-2"></div>
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
-        <button onclick="closeModalDirect('singleRxModal')" class="px-4 py-2 text-slate-700 font-bold rounded-xl">ביטול</button>
-        <button onclick="executeSinglePatientPrint()" class="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white font-black rounded-xl flex items-center gap-1.5 shadow">
-          <i class="ph-bold ph-printer text-base"></i> הדפס מרשם (A4 לאורך)
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========================================================================= -->
-  <!-- МОДАЛЬНОЕ ОКНО 4: ЖУРНАЛ РЕЦЕПТОВ -->
-  <!-- ========================================================================= -->
+  <!-- МОДАЛЬНОЕ ОКНО 6: ЖУРНАЛ -->
   <div id="prescriptionLogModal" style="display: none;" class="fixed inset-0 bg-slate-950/70 z-50 items-center justify-center p-3 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden text-xs">
       <div class="bg-indigo-900 text-white px-5 py-3.5 flex justify-between items-center">
@@ -332,27 +412,24 @@
     </div>
   </div>
 
-  <!-- ПЕЧАТНАЯ ЗОНА A4 PORTRAIT -->
+  <!-- ПЕЧАТНАЯ ЗОНА -->
   <div id="printArea" class="hidden print-only"></div>
 
   <script>
     // ===========================================================================
-    // ПРЯМОЕ НАДЕЖНОЕ УПРАВЛЕНИЕ ОКНАМИ
+    // ПРЕПАРАТЫ И ПРЕДНАСТРОЙКИ (СУБОКСОН, СУБЛОКЕЙД, СЕЛИНКРО И ДР.)
     // ===========================================================================
-    function openModalDirect(id) {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'flex';
-    }
-    function closeModalDirect(id) {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    }
-
-    function openSettingsModal() {
-      document.getElementById('settingsUrlInput').value = localStorage.getItem('google_apps_script_url') || '';
-      document.getElementById('settingsKeyInput').value = localStorage.getItem('google_apps_script_key') || '';
-      openModalDirect('settingsModal');
-    }
+    const AVAILABLE_DRUGS = [
+      { id: "SUB_8", nameHe: 'סובוקסון פילם 8 מ"ג / 2 מ"ג', nameEn: "SUBOXONE FILM 8 MG / 2 MG", inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 8 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 2 MG", strengthMg: 8, isSuboxone: true, defaultInst: 'פילם אחד מתחת ללשון או בוקאלי' },
+      { id: "SUB_2", nameHe: 'סובוקסון פילם 2 מ"ג / 0.5 מ"ג', nameEn: "SUBOXONE FILM 2 MG / 0.5 MG", inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 2 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 0.5 MG", strengthMg: 2, isSuboxone: true, defaultInst: 'פילם אחד מתחת ללשון או בוקאלי' },
+      { id: "SUB_12", nameHe: 'סובוקסון פילם 12 מ"ג / 3 מ"ג', nameEn: "SUBOXONE FILM 12 MG / 3 MG", inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 12 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 3 MG", strengthMg: 12, isSuboxone: true, defaultInst: 'פילם אחד מתחת ללשון או בוקאלי' },
+      { id: "SUB_4", nameHe: 'סובוקסון פילם 4 מ"ג / 1 מ"ג', nameEn: "SUBOXONE FILM 4 MG / 1 MG", inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 4 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 1 MG", strengthMg: 4, isSuboxone: true, defaultInst: 'פילם אחד מתחת ללשון או בוקאלי' },
+      { id: "SUBLOCADE_300", nameHe: 'סובלוקייד 300 מ"ג (זריקה)', nameEn: "SUBLOCADE 300 MG INJECTION", inn: "BUPRENORPHINE DEPOT 300 MG", strengthMg: 0, isSublocade: true, defaultInst: 'הזרקה תת-עורית בבטן פעם ב-28 יום' },
+      { id: "SUBLOCADE_100", nameHe: 'סובלוקייד 100 מ"ג (זריקה)', nameEn: "SUBLOCADE 100 MG INJECTION", inn: "BUPRENORPHINE DEPOT 100 MG", strengthMg: 0, isSublocade: true, defaultInst: 'הזרקה תת-עורית בבטן פעם ב-28 יום' },
+      { id: "SELINCRO_18", nameHe: 'סלינקרו 18 מ"ג (Selincro - Nalmefene)', nameEn: "SELINCRO 18 MG (NALMEFENE)", inn: "NALMEFENE HYDROCHLORIDE DIHYDRATE 18 MG", strengthMg: 0, isSelincro: true, defaultInst: 'טבליה אחת דרך הפה לפי הצורך (בימים של סיכון לשתיית אלכוהול)' },
+      { id: "METHADONE_SOL", nameHe: 'מטאדון תמיסה לשתייה 10 מ"ג/מ"ל', nameEn: "METHADONE ORAL SOLUTION 10 MG/ML", inn: "METHADONE HYDROCHLORIDE", strengthMg: 0, defaultInst: 'נטילה יומית דרך הפה לפי מינון' },
+      { id: "CANNABIS", nameHe: 'קנאביס רפואי (ברישיון בתוקף)', nameEn: "MEDICAL CANNABIS", inn: "MEDICAL CANNABIS", strengthMg: 0, defaultInst: 'לפי הוראות הרישיון בתוקף' }
+    ];
 
     let patients = JSON.parse(localStorage.getItem('clinic_patients')) || [];
     let visits = JSON.parse(localStorage.getItem('clinic_visits')) || [];
@@ -373,6 +450,71 @@
       localStorage.setItem('clinic_patients', JSON.stringify(patients));
       localStorage.setItem('clinic_visits', JSON.stringify(visits));
       localStorage.setItem('clinic_prescriptions_log', JSON.stringify(prescriptionsLog));
+    }
+
+    function openModalDirect(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'flex';
+    }
+    function closeModalDirect(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsUrlInput').value = localStorage.getItem('google_apps_script_url') || '';
+      document.getElementById('settingsKeyInput').value = localStorage.getItem('google_apps_script_key') || '';
+      openModalDirect('settingsModal');
+    }
+
+    // ===========================================================================
+    // АВТОМАТИЧЕСКОЕ И НАДЕЖНОЕ СОХРАНЕНИЕ В ОБЛАКО GOOGLE SHEETS
+    // ===========================================================================
+    async function saveAllToGoogleSheets(customSuccessMessage = "נשמר בהצלחה ב-Google Sheets!") {
+      saveState(); // Сначала локально
+
+      const url = localStorage.getItem('google_apps_script_url');
+      const key = localStorage.getItem('google_apps_script_key');
+      const toast = document.getElementById('saveNotificationToast');
+
+      if (!url || !key) {
+        showToast("⚠️ מצב מקומי — הגדר URL בגלגל השיניים לשמירה בענן", "bg-amber-100 text-amber-950 border-amber-400");
+        return;
+      }
+
+      showToast("💾 שומר שינויים בענן Google Sheets...", "bg-blue-100 text-blue-950 border-blue-400");
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            key: key,
+            action: 'saveAllData',
+            patients: patients,
+            visits: visits,
+            prescriptionsLog: prescriptionsLog
+          })
+        });
+        const res = await response.json();
+        if (res.success) {
+          showToast(`✓ ${customSuccessMessage}`, "bg-emerald-100 text-emerald-950 border-emerald-400");
+        } else {
+          showToast("⚠️ שגיאה בשמירה: " + res.error, "bg-rose-100 text-rose-950 border-rose-400");
+        }
+      } catch (err) {
+        showToast("⚠️ שגיאת רשת בשמירה ל-Google Sheets", "bg-rose-100 text-rose-950 border-rose-400");
+      }
+    }
+
+    function showToast(msg, colorClass) {
+      const toast = document.getElementById('saveNotificationToast');
+      if (!toast) return;
+      toast.className = `fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-xl text-xs font-black flex items-center gap-2 border transition-all duration-300 ${colorClass}`;
+      toast.innerHTML = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 
     function formatDateDDMMYYYY(dateInput) {
@@ -416,13 +558,9 @@
 
     function getFilmsQuantityWordsHebrew(qtyNum) {
       const map = {
-        1: "פילם אחד (1)",
-        7: "שבעה (7) פילמים",
-        14: "ארבעה עשר (14) פילמים",
-        28: "עשרים ושמונה (28) פילמים",
-        42: "ארבעים ושניים (42) פילמים",
-        56: "חמישים ושישה (56) פילמים",
-        84: "שמונים וארבעה (84) פילמים",
+        1: "פילם אחד (1)", 7: "שבעה (7) פילמים", 14: "ארבעה עשר (14) פילמים",
+        28: "עשרים ושמונה (28) פילמים", 42: "ארבעים ושניים (42) פילמים",
+        56: "חמישים ושישה (56) פילמים", 84: "שמונים וארבעה (84) פילמים",
         112: "מאה ושניים עשר (112) פילמים"
       };
       return map[qtyNum] || `${qtyNum} פילמים`;
@@ -459,8 +597,33 @@
     }
 
     // ===========================================================================
-    // ЛОГИКА ОЧЕРЕДИ: НЕЯВКИ СКРЫВАЮТСЯ ЕСЛИ БЫЛ ПОСЛЕДУЮЩИЙ ВИЗИТ
+    // РАСПИСАНИЕ И АНАЛИЗ ЗАПАСА ПРЕПАРАТОВ (ИНДИКАТОР ОПЕРЕЖЕНИЯ / ПРОСРОЧКИ)
     // ===========================================================================
+    function getPatientTimingBadge(patId, targetDateStr) {
+      if (!targetDateStr) return '';
+      const patVisits = visits.filter(v => v.patientId === patId && v.status === 'DONE' && (v.days > 0));
+      if (patVisits.length === 0) return '';
+
+      // Берем последний визит с выдачей лекарства, предшествующий этой дате
+      const pastVisits = patVisits.filter(v => v.date && v.date < targetDateStr).sort((a,b) => String(b.date).localeCompare(String(a.date)));
+      if (pastVisits.length === 0) return '';
+
+      const lastV = pastVisits[0];
+      const lastDate = new Date(lastV.date);
+      const covEnd = new Date(lastDate.getTime() + (parseInt(lastV.days) || 0) * 86400000);
+      const targetDate = new Date(targetDateStr);
+
+      const diffDays = Math.round((targetDate - covEnd) / 86400000);
+
+      if (diffDays > 0) {
+        return `<span class="bg-rose-100 text-rose-900 font-bold px-2 py-0.5 rounded text-[11px] border border-rose-300">⚠️ איחור של ${diffDays} ימים (אזל ב-${formatDateDDMMYYYY(covEnd)})</span>`;
+      } else if (diffDays === 0) {
+        return `<span class="bg-emerald-100 text-emerald-950 font-bold px-2 py-0.5 rounded text-[11px] border border-emerald-300">✓ הגעה יום ביומו (בזמן)</span>`;
+      } else {
+        return `<span class="bg-blue-100 text-blue-950 font-bold px-2 py-0.5 rounded text-[11px] border border-blue-300">ℹ️ מוקדם ב-${Math.abs(diffDays)} ימים</span>`;
+      }
+    }
+
     function renderScheduleList() {
       const container = document.getElementById('scheduleContainer');
       const query = document.getElementById('searchInput').value.toLowerCase().replace(/[-\s]/g, '');
@@ -539,7 +702,7 @@
       });
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-bold text-xs">אין מטופלים להצגה. לחץ על ⚙️ לסנכרון.</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-bold text-xs">אין מטופלים להצגה בתור הפעיל.</div>`;
         return;
       }
 
@@ -558,9 +721,10 @@
         }
 
         const cleanTime = cleanTimeString(v.time);
+        const timingBadge = getPatientTimingBadge(p.id, v.date);
 
         const card = document.createElement('div');
-        card.className = `p-3.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
+        card.className = `p-3 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${
           isSelected 
             ? 'bg-indigo-50 border-indigo-600 shadow-md ring-2 ring-indigo-500' 
             : isNoDate 
@@ -583,28 +747,31 @@
             <div class="flex items-center gap-1">
               ${isWithinWeek ? `
                 <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 border border-amber-300">
-                  ⚡ בשבוע הקרוב (${daysUntil === 0 ? 'היום!' : `בעוד ${daysUntil} ימים`})
+                  ⚡ בשבוע הקרוב
                 </span>
               ` : ''}
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
                 isNoDate ? 'bg-rose-600 text-white' : isDone ? 'bg-emerald-100 text-emerald-900' : 'bg-slate-200 text-slate-800'
               }">
-                ${isNoDate ? 'לא הגיע' : isDone ? 'בוצע' : 'מתוכנן'}
+                ${isNoDate ? 'לא הגיע (דורש תיאום)' : isDone ? 'בוצע' : 'מתוכנן'}
               </span>
             </div>
           </div>
 
-          <div class="flex justify-between items-center pt-1">
+          <div class="flex justify-between items-center pt-0.5">
             <div class="font-black text-base text-slate-950">${p.nameHe}</div>
             <span class="text-xs font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">${p.clinic}</span>
           </div>
+
+          <!-- Индикатор запаса лекарств -->
+          ${timingBadge ? `<div class="mt-0.5">${timingBadge}</div>` : ''}
         `;
         container.appendChild(card);
       });
     }
 
     // ===========================================================================
-    // КАРТОЧКА ПАЦИЕНТА СПРАВА
+    // КАРТОЧКА ВИЗИТА И ПАЦИЕНТА СПРАВА (ПОЛНОЕ УПРАВЛЕНИЕ И АВТО-ДАТА)
     // ===========================================================================
     function renderPatientView() {
       const container = document.getElementById('patientViewContainer');
@@ -617,20 +784,30 @@
 
       const patVisits = visits.filter(v => v.patientId === pat.id).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
       const age = calculateAge(pat.birthDate);
-      const lines = decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
-      const totalDailyMg = pat.defaultDailyMg || 16;
+
+      // Текущие лекарства пациента
+      let currentLines = pat.rxLines || decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
+      let currentTotalMg = 0;
+      currentLines.forEach(l => { if (l.isSuboxone) currentTotalMg += (l.strengthMg * l.filmsPerDay); });
+
+      const todayStr = new Date().toISOString().split('T')[0];
 
       container.innerHTML = `
         <div class="flex flex-col gap-4">
+          <!-- Шапка карточки пациента -->
           <div class="flex flex-wrap justify-between items-start gap-3 pb-3 border-b border-slate-300">
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-2xl font-black text-slate-950">${pat.nameHe}</h2>
                 <span class="text-xs bg-indigo-100 text-indigo-900 px-2.5 py-0.5 rounded-lg font-bold">${pat.clinic}</span>
+                <button onclick="openEditPatientModal('${pat.id}')" title="ערוך פרטי מטופל" class="text-indigo-600 hover:text-indigo-800 p-1">
+                  <i class="ph-bold ph-pencil-simple text-base"></i>
+                </button>
               </div>
               <div class="flex gap-4 text-xs text-slate-700 mt-1.5 font-mono">
                 <span><b>ת.ז.:</b> ${pat.tz}</span>
                 <span><b>ת. לידה:</b> ${pat.birthDate} ${age ? `(גיל: ${age})` : ''}</span>
+                <span><b>טלפון:</b> ${pat.phone}</span>
               </div>
             </div>
 
@@ -641,68 +818,124 @@
             </div>
           </div>
 
-          <div class="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex flex-col gap-2">
+          <!-- БЛОК 1: ДИАГНОЗ И КЛИНИЧЕСКИЕ РЕКОМЕНДАЦИИ -->
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-300 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-slate-900 flex items-center gap-1">
+                <i class="ph-bold ph-stethoscope text-indigo-700"></i> אבחנה, תוכנית טיפול והערות:
+              </span>
+            </div>
+            <textarea id="livePatientDiagnosisInput" rows="2" class="w-full p-2 border border-slate-300 rounded-xl text-xs font-bold bg-white" placeholder="הכנס אבחנה, הערות, תוצאות בדיקות שתן או שינויים...">${pat.diagnosis || ''}</textarea>
+          </div>
+
+          <!-- БЛОК 2: КОНСТРУКТОР ПРЕПАРАТОВ ДЛЯ ЭТОГО ПАЦИЕНТА -->
+          <div class="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex flex-col gap-2.5">
             <div class="flex justify-between items-center">
               <span class="text-xs font-black text-purple-950 flex items-center gap-1">
-                <i class="ph-bold ph-pill text-purple-700"></i> מינון סובוקסון פילם ופירוק:
+                <i class="ph-bold ph-pill text-purple-700"></i> תכשירים ומינונים שנרשמו:
               </span>
-              <div class="flex items-center gap-2">
+              ${currentTotalMg > 0 ? `
                 <span class="text-xs font-black bg-purple-200 text-purple-950 px-2.5 py-1 rounded-lg">
-                  סה"כ: ${totalDailyMg} מ"ג ביממה
+                  סה"כ סובוקסון: ${currentTotalMg} מ"ג ביממה
                 </span>
-                <button onclick="changePatientDailyMg('${pat.id}')" class="text-xs text-purple-700 font-bold hover:underline">שנה מינון</button>
-              </div>
+              ` : ''}
             </div>
 
-            <div class="flex flex-col gap-1.5 mt-1">
-              ${lines.map(l => `
-                <div class="bg-white p-2 rounded-xl border border-purple-100 flex justify-between items-center text-xs">
+            <!-- Список назначенных препаратов -->
+            <div id="patientPrescribedDrugsList" class="flex flex-col gap-1.5">
+              ${currentLines.map((l, idx) => `
+                <div class="bg-white p-2.5 rounded-xl border border-purple-200 flex justify-between items-center text-xs">
                   <div>
-                    <span class="font-bold text-slate-900">${l.nameHe}</span>
-                    <span class="text-purple-700 font-mono font-bold mr-2">(${l.filmsPerDay} פילמים = ${l.strengthMg * l.filmsPerDay} מ"ג)</span>
+                    <span class="font-black text-slate-950">${l.nameHe}</span>
+                    <span class="text-purple-700 font-bold mr-2">(${l.filmsPerDay || 1} ליום${l.strengthMg ? ` = ${l.strengthMg * l.filmsPerDay} מ"ג` : ''})</span>
                     <p class="text-[11px] text-slate-500 mt-0.5">${l.inst}</p>
                   </div>
+                  <button onclick="removeDrugFromPatientLines(${idx})" class="text-rose-600 hover:text-rose-800 p-1 font-bold">
+                    <i class="ph-bold ph-trash text-base"></i>
+                  </button>
                 </div>
               `).join('')}
             </div>
 
-            ${pat.otherMeds ? `
-              <div class="mt-1 pt-1 border-t border-purple-200 text-xs font-bold text-slate-800">
-                <span>תכשירים נוספים: </span> <span class="text-indigo-900 font-mono">${pat.otherMeds}</span>
+            <!-- Форма добавления нового препарата к пациенту -->
+            <div class="bg-white/80 p-2.5 rounded-xl border border-purple-200 flex flex-wrap items-center gap-2 mt-1">
+              <select id="addDrugSelect" onchange="autoFillDrugInstructions(this.value)" class="p-1.5 border border-slate-300 rounded-lg text-xs font-bold bg-white flex-1 min-w-[200px]">
+                ${AVAILABLE_DRUGS.map(d => `<option value="${d.id}">${d.nameHe}</option>`).join('')}
+              </select>
+              <input type="number" id="addDrugQtyPerDay" value="1" min="1" class="w-14 p-1.5 border border-slate-300 rounded-lg text-center font-bold text-xs" title="כמות ליום">
+              <span class="text-xs text-slate-600">ביום</span>
+              <button onclick="addSelectedDrugToPatient()" class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-black shadow">
+                + הוסף תכשיר
+              </button>
+            </div>
+          </div>
+
+          <!-- БЛОК 3: ФИКСАЦИЯ ПРИЕМА И АВТОМАТИЧЕСКОЕ НАЗНАЧЕНИЕ СЛЕДУЮЩЕГО ВИЗИТА -->
+          <div class="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-200 flex flex-col gap-3">
+            <span class="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+              <i class="ph-bold ph-calendar-check text-indigo-700"></i> תיעוד ביקור וקביעת מועד הבא (חישוב אוטומטי לפי ימי טיפול):
+            </span>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-xl border border-indigo-100">
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">תקופת טיפול (ימים):</label>
+                <div class="flex gap-1">
+                  <button type="button" onclick="setVisitDaysPreset(7)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded font-bold text-xs">7</button>
+                  <button type="button" onclick="setVisitDaysPreset(14)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded font-bold text-xs">14</button>
+                  <button type="button" onclick="setVisitDaysPreset(28)" class="px-2 py-1 bg-indigo-100 text-indigo-950 rounded font-black text-xs">28</button>
+                  <input type="number" id="liveVisitDaysInput" value="${pat.defaultDays || 28}" oninput="recalculateNextVisitDate()" class="w-14 p-1 border rounded text-center font-black text-xs">
+                </div>
               </div>
-            ` : ''}
+
+              <div>
+                <label class="block font-bold text-indigo-950 text-xs mb-1">תור הבא (חושב אוטומטית):</label>
+                <input type="date" id="liveNextVisitDateInput" class="w-full p-1.5 border-2 border-indigo-500 rounded-lg text-xs font-black bg-indigo-50/40 font-mono">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">שעת תור הבא:</label>
+                <input type="text" id="liveNextVisitTimeInput" value="15:00" class="w-full p-1.5 border border-slate-300 rounded-lg text-xs font-mono text-center">
+              </div>
+            </div>
+
+            <!-- ГЛАВНАЯ КНОПКА: СОХРАНИТЬ И СИНХРОНИЗИРОВАТЬ В GOOGLE SHEETS -->
+            <div class="flex flex-wrap gap-2">
+              <button onclick="commitVisitRecord('${pat.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white p-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow">
+                <i class="ph-bold ph-check-circle text-lg"></i> תעד ביקור, קבע תור הבא ושמור בענן Google
+              </button>
+
+              <button onclick="markPatientNoShowNow('${pat.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1">
+                <i class="ph-bold ph-user-minus"></i> סמן כלא הגיע (+7 ימים)
+              </button>
+
+              <button onclick="dischargePatientNow('${pat.id}')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2.5 rounded-xl text-xs font-bold">
+                סיום טיפול
+              </button>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <button onclick="quickScheduleNext('${pat.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow">
-              <i class="ph-bold ph-calendar-plus text-base"></i> קבע תור הבא
-            </button>
-            <button onclick="markNoShow('${pat.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 p-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-              <i class="ph-bold ph-user-minus text-base"></i> לא הגיע (+7 ימים)
-            </button>
-            <button onclick="openSingleRxModal('${pat.id}')" class="bg-purple-600 hover:bg-purple-500 text-white p-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow">
-              <i class="ph-bold ph-printer text-base"></i> הנפק מרשם למטופל זה
-            </button>
-            <button onclick="dischargePatient('${pat.id}')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 p-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-              <i class="ph-bold ph-x-circle text-base"></i> סיום טיפול
-            </button>
-          </div>
-
-          <div class="flex flex-col gap-2 mt-2">
+          <!-- БЛОК 4: ХРОНОЛОГИЯ ВСЕХ ВИЗИТОВ С КНОПКОЙ РЕДАКТИРОВАНИЯ -->
+          <div class="flex flex-col gap-2 mt-1">
             <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
-              <i class="ph-bold ph-clock-counter-clockwise text-indigo-600"></i> היסטוריית ביקורים ומעקב (${patVisits.length})
+              <i class="ph-bold ph-clock-counter-clockwise text-indigo-600"></i> היסטוריית כל הביקורים והמרשמים (${patVisits.length})
             </h4>
 
             <div class="flex flex-col gap-2 max-h-[260px] overflow-y-auto pl-1">
               ${patVisits.map(v => `
                 <div class="bg-white p-2.5 rounded-xl border border-slate-300 text-xs flex flex-col gap-1 shadow-sm">
                   <div class="flex justify-between items-center font-mono">
-                    <span class="font-extrabold text-indigo-950">${formatDateDDMMYYYY(v.date)}</span>
-                    <span class="${v.status === 'DONE' ? 'text-emerald-700 font-bold' : v.status.includes('MISSED') ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold'}">
-                      ${v.status === 'DONE' ? 'התקיים' : v.status.includes('MISSED') ? 'לא הגיע' : 'מתוכנן'}
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="font-black text-indigo-950">📅 ${formatDateDDMMYYYY(v.date)}</span>
+                      <span class="${v.status === 'DONE' ? 'text-emerald-700 font-bold' : v.status.includes('MISSED') ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold'}">
+                        ${v.status === 'DONE' ? 'התקיים' : v.status.includes('MISSED') ? 'לא הגיע' : 'מתוכנן'}
+                      </span>
+                    </div>
+                    <!-- КНОПКА РЕДАКТИРОВАНИЯ ПРОШЛОГО ВИЗИТА -->
+                    <button onclick="openEditVisitModal('${v.id}')" class="text-slate-500 hover:text-indigo-700 p-1 flex items-center gap-1 font-bold">
+                      <i class="ph-bold ph-pencil-simple text-sm"></i> <span>ערוך ביקור זה</span>
+                    </button>
                   </div>
-                  <div class="text-slate-800 font-bold">${v.med || `סובוקסון ${pat.defaultDailyMg} מ"ג`} (${v.days || 28} ימים)</div>
+                  <div class="text-slate-800 font-bold">${v.med || `סובוקסון`} (${v.days || 0} ימים)</div>
                   ${v.notes ? `<p class="text-slate-600 italic text-[11px]">"${v.notes}"</p>` : ''}
                 </div>
               `).join('')}
@@ -710,10 +943,305 @@
           </div>
         </div>
       `;
+
+      recalculateNextVisitDate();
     }
 
     // ===========================================================================
-    // ПАКЕТНАЯ ВЫПИСКА
+    // ЛОГИКА АВТОМАТИЧЕСКОГО РАСЧЕТА ДАТЫ СЛЕДУЮЩЕГО ВИЗИТА
+    // ===========================================================================
+    function setVisitDaysPreset(days) {
+      document.getElementById('liveVisitDaysInput').value = days;
+      recalculateNextVisitDate();
+    }
+
+    function recalculateNextVisitDate() {
+      const days = parseInt(document.getElementById('liveVisitDaysInput')?.value) || 28;
+      const today = new Date();
+      const nextDate = new Date(today.getTime() + days * 86400000);
+      const nextInput = document.getElementById('liveNextVisitDateInput');
+      if (nextInput) {
+        nextInput.value = nextDate.toISOString().split('T')[0];
+      }
+    }
+
+    // Добавление / удаление препаратов в карте пациента
+    function addSelectedDrugToPatient() {
+      const pat = patients.find(p => p.id === selectedPatientId);
+      if (!pat) return;
+
+      const drugId = document.getElementById('addDrugSelect').value;
+      const qtyPerDay = parseInt(document.getElementById('addDrugQtyPerDay').value) || 1;
+      const drugObj = AVAILABLE_DRUGS.find(d => d.id === drugId);
+      if (!drugObj) return;
+
+      if (!pat.rxLines) pat.rxLines = decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
+
+      pat.rxLines.push({
+        medId: drugObj.id,
+        nameHe: drugObj.nameHe,
+        nameEn: drugObj.nameEn,
+        inn: drugObj.inn,
+        strengthMg: drugObj.strengthMg,
+        isSuboxone: drugObj.isSuboxone || false,
+        filmsPerDay: qtyPerDay,
+        inst: drugObj.defaultInst
+      });
+
+      // Пересчитываем суммарную дозу Субоксона
+      let subMg = 0;
+      pat.rxLines.forEach(l => { if (l.isSuboxone) subMg += (l.strengthMg * l.filmsPerDay); });
+      if (subMg > 0) pat.defaultDailyMg = subMg;
+
+      saveAllToGoogleSheets("תכשיר נוסף בהצלחה!");
+      renderPatientView();
+    }
+
+    function removeDrugFromPatientLines(index) {
+      const pat = patients.find(p => p.id === selectedPatientId);
+      if (!pat || !pat.rxLines) return;
+      pat.rxLines.splice(index, 1);
+
+      let subMg = 0;
+      pat.rxLines.forEach(l => { if (l.isSuboxone) subMg += (l.strengthMg * l.filmsPerDay); });
+      pat.defaultDailyMg = subMg;
+
+      saveAllToGoogleSheets("תכשיר הוסר בהצלחה!");
+      renderPatientView();
+    }
+
+    // ===========================================================================
+    // ФИКСАЦИЯ ВИЗИТА И АВТОМАТИЧЕСКАЯ ЗАПИСЬ НА СЛЕДУЮЩИЙ РАЗ
+    // ===========================================================================
+    async function commitVisitRecord(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+
+      const days = parseInt(document.getElementById('liveVisitDaysInput').value) || 28;
+      const nextDate = document.getElementById('liveNextVisitDateInput').value;
+      const nextTime = document.getElementById('liveNextVisitTimeInput').value || '15:00';
+      const diag = document.getElementById('livePatientDiagnosisInput').value;
+
+      pat.diagnosis = diag;
+      pat.defaultDays = days;
+      pat.status = 'ACTIVE';
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      // Собираем название препаратов
+      const lines = pat.rxLines || decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
+      const medSummary = lines.map(l => `${l.nameHe} (${l.filmsPerDay}/יום)`).join(' + ');
+
+      // 1. Записываем текущий визит как завершенный (DONE)
+      visits.push({
+        id: "v_" + Date.now(),
+        patientId: pat.id,
+        date: todayStr,
+        time: cleanTimeString(new Date().toISOString()),
+        status: "DONE",
+        med: medSummary,
+        days: days,
+        dailyMg: pat.defaultDailyMg || 0,
+        notes: diag
+      });
+
+      // 2. Назначаем СЛЕДУЮЩИЙ визит ровно через X дней
+      if (nextDate) {
+        visits.push({
+          id: "v_" + (Date.now() + 1),
+          patientId: pat.id,
+          date: nextDate,
+          time: nextTime,
+          status: "SCHEDULED",
+          med: medSummary,
+          days: days,
+          dailyMg: pat.defaultDailyMg || 0,
+          notes: "תור המשך מתוכנן"
+        });
+      }
+
+      // СОХРАНЯЕМ В ОБЛАКО
+      await saveAllToGoogleSheets("הביקור תועד, התור הבא נקבע ונשמר ב-Google Sheets!");
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function markPatientNoShowNow(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      const nextWeek = d.toISOString().split('T')[0];
+
+      visits.push({
+        id: "v_" + Date.now(),
+        patientId: pat.id,
+        date: nextWeek,
+        time: "15:00",
+        status: "SCHEDULED",
+        med: `סובוקסון ${pat.defaultDailyMg || 16} מ"ג`,
+        days: pat.defaultDays || 28,
+        notes: "הועבר אוטומטית בעקבות אי הגעה"
+      });
+
+      saveAllToGoogleSheets(`המטופל סומן כלא הגיע. נקבע תור ל-${formatDateDDMMYYYY(nextWeek)}`);
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function dischargePatientNow(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+      const r = prompt("סיבת סיום טיפול:\n1. אי הגעה ממושכת\n2. חוסר מענה\n3. סיום טיפול מתוכנן", "אי הגעה ממושכת");
+      if (r) {
+        pat.status = 'DISCHARGED';
+        saveAllToGoogleSheets("המטופל הועבר לסטטוס סיום טיפול");
+        renderScheduleList();
+        renderPatientView();
+      }
+    }
+
+    // ===========================================================================
+    // РЕДАКТИРОВАНИЕ ПРОШЛОГО ВИЗИТА (КНОПКА РЕДАКТИРОВАНИЯ)
+    // ===========================================================================
+    function openEditVisitModal(vId) {
+      const v = visits.find(x => x.id === vId);
+      if (!v) return;
+      document.getElementById('editVisitId').value = v.id;
+      document.getElementById('editVisitDate').value = v.date || '';
+      document.getElementById('editVisitTime').value = cleanTimeString(v.time) || '';
+      document.getElementById('editVisitStatus').value = v.status || 'DONE';
+      document.getElementById('editVisitMed').value = v.med || '';
+      document.getElementById('editVisitDays').value = v.days || 0;
+      document.getElementById('editVisitDailyMg').value = v.dailyMg || 0;
+      document.getElementById('editVisitNotes').value = v.notes || '';
+      openModalDirect('editVisitModal');
+    }
+
+    function saveVisitEditForm() {
+      const vId = document.getElementById('editVisitId').value;
+      const v = visits.find(x => x.id === vId);
+      if (!v) return;
+
+      v.date = document.getElementById('editVisitDate').value;
+      v.time = document.getElementById('editVisitTime').value;
+      v.status = document.getElementById('editVisitStatus').value;
+      v.med = document.getElementById('editVisitMed').value;
+      v.days = parseInt(document.getElementById('editVisitDays').value) || 0;
+      v.dailyMg = parseInt(document.getElementById('editVisitDailyMg').value) || 0;
+      v.notes = document.getElementById('editVisitNotes').value;
+
+      closeModalDirect('editVisitModal');
+      saveAllToGoogleSheets("הביקור עודכן בהצלחה!");
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    // ===========================================================================
+    // СВОДНАЯ ТАБЛИЦА ВСЕХ ПАЦИЕНТОВ ДЛЯ РЕДАКТИРОВАНИЯ
+    // ===========================================================================
+    function openPatientsTableModal() {
+      renderPatientsTableRows();
+      openModalDirect('patientsTableModal');
+    }
+
+    function renderPatientsTableRows() {
+      const tbody = document.getElementById('patientsFullTableBody');
+      tbody.innerHTML = '';
+      const q = document.getElementById('patientTableSearchInput').value.toLowerCase();
+
+      const filtered = patients.filter(p => {
+        return String(p.nameHe || '').toLowerCase().includes(q) ||
+               String(p.tz || '').includes(q) ||
+               String(p.clinic || '').toLowerCase().includes(q);
+      });
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50 transition';
+        tr.innerHTML = `
+          <td class="p-2.5 font-black text-slate-950">${p.nameHe}</td>
+          <td class="p-2.5 font-mono text-slate-700">${p.tz}</td>
+          <td class="p-2.5 text-slate-700">${p.phone}</td>
+          <td class="p-2.5">${p.birthDate}</td>
+          <td class="p-2.5 font-bold text-slate-800">${p.clinic}</td>
+          <td class="p-2.5 text-slate-600 truncate max-w-[150px]">${p.diagnosis || ''}</td>
+          <td class="p-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold ${p.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-950' : 'bg-slate-200 text-slate-800'}">
+              ${p.status === 'ACTIVE' ? 'פעיל' : 'סיום טיפול'}
+            </span>
+          </td>
+          <td class="p-2.5 text-center">
+            <button onclick="openEditPatientModal('${p.id}')" class="bg-indigo-100 text-indigo-900 hover:bg-indigo-200 px-2.5 py-1 rounded-lg font-bold">
+              ערוך
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openEditPatientModal(patId) {
+      const p = patients.find(x => x.id === patId);
+      if (!p) return;
+      document.getElementById('editPatId').value = p.id;
+      document.getElementById('editPatName').value = p.nameHe || '';
+      document.getElementById('editPatTz').value = p.tz || '';
+      document.getElementById('editPatBirth').value = p.birthDate || '';
+      document.getElementById('editPatPhone').value = p.phone || '';
+      document.getElementById('editPatClinic').value = p.clinic || 'מאוחדת';
+      document.getElementById('editPatDiag').value = p.diagnosis || '';
+      openModalDirect('editPatientModal');
+    }
+
+    function savePatientEditForm() {
+      const id = document.getElementById('editPatId').value;
+      const p = patients.find(x => x.id === id);
+      if (!p) return;
+
+      p.nameHe = document.getElementById('editPatName').value;
+      p.tz = document.getElementById('editPatTz').value;
+      p.birthDate = document.getElementById('editPatBirth').value;
+      p.phone = document.getElementById('editPatPhone').value;
+      p.clinic = document.getElementById('editPatClinic').value;
+      p.diagnosis = document.getElementById('editPatDiag').value;
+
+      closeModalDirect('editPatientModal');
+      saveAllToGoogleSheets("פרטי המטופל עודכנו בהצלחה!");
+      renderPatientsTableRows();
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function openNewPatientModal() {
+      const name = prompt("שם מלא בעברית:");
+      if (!name) return;
+      const tz = prompt("תעודת זהות:", "000000000");
+      const phone = prompt("טלפון:", "");
+      const clinic = prompt("מרפאה (מאוחדת / רמב\"ם / דרור חיפה):", "מאוחדת");
+
+      const newP = {
+        id: "p_" + Date.now(),
+        nameHe: name,
+        tz: tz || '',
+        phone: phone || '',
+        birthDate: "01.01.1926",
+        clinic: clinic || "מאוחדת",
+        diagnosis: "תלות באופיואידים",
+        status: "ACTIVE",
+        defaultDailyMg: 16,
+        defaultDays: 28,
+        otherMeds: ""
+      };
+      patients.unshift(newP);
+      selectedPatientId = newP.id;
+      saveAllToGoogleSheets("מטופל חדש נוצר ונשמר בענן!");
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    // ===========================================================================
+    // ПАКЕТНАЯ ВЫПИСКА РЕЦЕПТОВ
     // ===========================================================================
     function openBatchPrintModal() {
       renderBatchPatientList();
@@ -766,8 +1294,8 @@
       targetPatients.forEach(p => {
         const tr = document.createElement('tr');
         tr.className = 'border-b hover:bg-slate-50 transition';
-        const lines = decomposeSuboxoneTotalMg(p.defaultDailyMg || 16);
-        const medDesc = lines.map(l => `${l.nameHe} (${l.filmsPerDay}/יום)`).join(' + ');
+        const lines = p.rxLines || decomposeSuboxoneTotalMg(p.defaultDailyMg || 16);
+        const medDesc = lines.map(l => `${l.nameHe} (${l.filmsPerDay || 1}/יום)`).join(' + ');
 
         tr.innerHTML = `
           <td class="p-2.5 text-center">
@@ -776,7 +1304,7 @@
           <td class="p-2.5 font-black text-slate-950">${p.nameHe}</td>
           <td class="p-2.5 font-mono text-slate-700">${p.tz}</td>
           <td class="p-2.5 font-bold text-slate-800">${p.clinic}</td>
-          <td class="p-2.5 font-bold text-indigo-950">${medDesc} ${p.otherMeds ? `[+ ${p.otherMeds}]` : ''}</td>
+          <td class="p-2.5 font-bold text-indigo-950">${medDesc}</td>
           <td class="p-2.5 text-center">
             <input type="number" class="batch-days-input w-16 p-1 border border-slate-300 rounded font-bold text-center bg-white" value="${p.defaultDays || 28}">
           </td>
@@ -817,12 +1345,13 @@
         const row = cb.closest('tr');
         const days = parseInt(row.querySelector('.batch-days-input').value) || 28;
 
-        const lines = decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
-        const totalDailyMg = pat.defaultDailyMg || 16;
-        const isOver24 = totalDailyMg > 24;
+        const lines = pat.rxLines || decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
+        let subMg = 0;
+        lines.forEach(l => { if (l.isSuboxone) subMg += (l.strengthMg * l.filmsPerDay); });
+        const isOver24 = subMg > 24;
 
         lines.forEach(line => {
-          const totalFilms = line.filmsPerDay * days;
+          const totalFilms = (line.filmsPerDay || 1) * days;
           const qtyWords = getFilmsQuantityWordsHebrew(totalFilms);
 
           const page = document.createElement('div');
@@ -858,17 +1387,17 @@
                   <b>כמות מנופקת:</b> <span class="font-bold underline text-base">${qtyWords}</span> (לטיפול של ${days} ימים).
                 </div>
                 <div class="text-sm mb-2">
-                  <b>הוראות שימוש:</b> ${line.inst}. (להניח מתחת ללשון או בוקאלי עד להמסה מלאה. אין לבלוע או ללעוס).
+                  <b>הוראות שימוש:</b> ${line.inst}.
                 </div>
                 <div class="text-xs text-slate-700">
-                  <b>סיבת הארכה מעל 10 ימים:</b> טיפול אחזקתי במחלה כרונית (תלות באופיואידים) - לפי נוהל 155.
+                  <b>סיבת הארכה מעל 10 ימים:</b> טיפול אחזקתי במחלה כרונית בהתאם לנוהל 155.
                 </div>
               </div>
 
               ${isOver24 ? `
                 <div class="border-2 border-black p-2 mb-3 text-xs bg-slate-50">
                   <b>הודעה מיוחדת בהתאם לסעיף 3.1.9 לנוהל 155 (מינון מעל 24 מ"ג ביממה):</b>
-                  <div>המינון הכולל (${totalDailyMg} מ"ג ביממה) נקבע עקב אי-יעילות מינון נמוך וקיום תלות אופיואידית כרונית ועמידות.</div>
+                  <div>המינון הכולל נקבע עקב אי-יעילות מינון נמוך וקיום תלות אופיואידית כרונית ועמידות.</div>
                   <div>המטופל בעל תעודת בדיקה בתוקף של מרכז גמילה מוכר (תוקף 6 חודשים). המרשם מיועד לתקופה שאינה עולה על חודשיים.</div>
                 </div>
               ` : ''}
@@ -903,131 +1432,18 @@
             patientName: pat.nameHe,
             tz: pat.tz,
             medName: line.nameEn,
-            qty: `${totalFilms} פילמים`,
+            qty: `${totalFilms} יח'`,
             doctor: DOCTOR_DETAILS.name
           });
         });
       });
 
-      saveState();
+      saveAllToGoogleSheets("מרשמים הונפקו ונרשמו ביומן!");
       window.print();
     }
 
     // ===========================================================================
-    // ВЫПИСКА ДЛЯ ОДНОГО ПАЦИЕНТА
-    // ===========================================================================
-    let currentSinglePatient = null;
-
-    function openSingleRxModal(patId) {
-      currentSinglePatient = patients.find(p => p.id === patId);
-      if (!currentSinglePatient) return;
-
-      document.getElementById('singleRxPatientDetails').innerText = `${currentSinglePatient.nameHe} (ת.ז. ${currentSinglePatient.tz}) — ${currentSinglePatient.clinic}`;
-      document.getElementById('singleRxDays').value = currentSinglePatient.defaultDays || 28;
-
-      const lines = decomposeSuboxoneTotalMg(currentSinglePatient.defaultDailyMg || 16);
-      const container = document.getElementById('singleRxFilmsList');
-      container.innerHTML = '';
-
-      lines.forEach(line => {
-        const item = document.createElement('div');
-        item.className = 'p-2 bg-slate-50 border rounded-lg flex justify-between items-center text-xs';
-        item.innerHTML = `
-          <div>
-            <span class="font-bold text-slate-900">${line.nameHe}</span>
-            <span class="text-purple-700 font-mono font-bold mr-2">(${line.filmsPerDay} פילמים ביום)</span>
-            <p class="text-[11px] text-slate-500 mt-0.5">${line.inst}</p>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-
-      openModalDirect('singleRxModal');
-    }
-
-    function executeSinglePatientPrint() {
-      if (!currentSinglePatient) return;
-      closeModalDirect('singleRxModal');
-      openBatchPrintModal();
-      document.querySelectorAll('.batch-pat-checkbox').forEach(cb => {
-        cb.checked = (cb.getAttribute('data-patid') === currentSinglePatient.id);
-      });
-      updateBatchCountBadge();
-      executeBatchPrint();
-    }
-
-    // ===========================================================================
-    // ДЕЙСТВИЯ С ПАЦИЕНТОМ
-    // ===========================================================================
-    function changePatientDailyMg(patId) {
-      const pat = patients.find(p => p.id === patId);
-      if (!pat) return;
-      const mgStr = prompt("הכנס מינון סובוקסון יומי במ\"ג (למשל: 20, 18, 12, 28):", pat.defaultDailyMg || 16);
-      if (mgStr !== null) {
-        pat.defaultDailyMg = parseInt(mgStr) || 16;
-        saveState();
-        renderPatientView();
-      }
-    }
-
-    function quickScheduleNext(patId) {
-      const pat = patients.find(p => p.id === patId);
-      if (!pat) return;
-      const nextDate = prompt("הכנס תאריך לתור הבא (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-      if (!nextDate) return;
-
-      visits.push({
-        id: "v_" + Date.now(),
-        patientId: pat.id,
-        date: nextDate,
-        time: "15:00",
-        status: "SCHEDULED",
-        med: `סובוקסון ${pat.defaultDailyMg || 16} מ"ג`,
-        days: 28,
-        notes: "נקבע תור המשך"
-      });
-      saveState();
-      renderScheduleList();
-      renderPatientView();
-    }
-
-    function markNoShow(patId) {
-      const pat = patients.find(p => p.id === patId);
-      if (!pat) return;
-      const d = new Date();
-      d.setDate(d.getDate() + 7);
-      const nextWeek = d.toISOString().split('T')[0];
-
-      visits.push({
-        id: "v_" + Date.now(),
-        patientId: pat.id,
-        date: nextWeek,
-        time: "15:00",
-        status: "SCHEDULED",
-        med: `סובוקסון ${pat.defaultDailyMg || 16} מ"ג`,
-        days: 28,
-        notes: "הועבר אוטומטית בעקבות אי הגעה"
-      });
-      saveState();
-      renderScheduleList();
-      renderPatientView();
-      alert(`המטופל סומן כלא הגיע. נקבע תור ל-${formatDateDDMMYYYY(nextWeek)}`);
-    }
-
-    function dischargePatient(patId) {
-      const pat = patients.find(p => p.id === patId);
-      if (!pat) return;
-      const r = prompt("סיבת סיום טיפול:\n1. אי הגעה ממושכת\n2. חוסר מענה\n3. סיום טיפול מתוכנן", "אי הגעה ממושכת");
-      if (r) {
-        pat.status = 'DISCHARGED';
-        saveState();
-        renderScheduleList();
-        renderPatientView();
-      }
-    }
-
-    // ===========================================================================
-    // СИНХРОНИЗАЦИЯ С GOOGLE SHEETS
+    // СИНХРОНИЗАЦИЯ GOOGLE SHEETS
     // ===========================================================================
     async function syncWithGoogleSheets(manual = false) {
       const url = document.getElementById('settingsUrlInput')?.value.trim() || localStorage.getItem('google_apps_script_url') || '';
@@ -1104,55 +1520,10 @@
       renderScheduleList();
     }
 
-    function openNewPatientModal() {
-      const name = prompt("שם מלא בעברית:");
-      if (!name) return;
-      const tz = prompt("תעודת זהות:", "000000000");
-      const phone = prompt("טלפון:", "");
-      const clinic = prompt("מרפאה (מאוחדת / רמב\"ם / דרור חיפה):", "מאוחדת");
-
-      const newP = {
-        id: "p_" + Date.now(),
-        nameHe: name,
-        tz: tz,
-        phone: phone,
-        birthDate: "01.01.1926",
-        clinic: clinic || "מאוחדת",
-        diagnosis: "תלות באופיואידים",
-        status: "ACTIVE",
-        defaultDailyMg: 16,
-        defaultDays: 28,
-        otherMeds: ""
-      };
-      patients.unshift(newP);
-      selectedPatientId = newP.id;
-      saveState();
-      renderScheduleList();
-      renderPatientView();
-    }
-
-    // НАВЕШИВАНИЕ ОБРАБОТЧИКОВ СОБЫТИЙ ДЛЯ СЕНСОРНЫХ ЭКРАНОВ
-    window.addEventListener('DOMContentLoaded', () => {
-      // Шестеренка в шапке
-      document.getElementById('btnHeaderSettings')?.addEventListener('click', openSettingsModal);
-      // Дублирующая кнопка настроек над поиском
-      document.getElementById('btnDuplicateSettings')?.addEventListener('click', openSettingsModal);
-      // Пакетная печать
-      document.getElementById('btnHeaderBatchRx')?.addEventListener('click', openBatchPrintModal);
-      // Журнал
-      document.getElementById('btnHeaderRxLog')?.addEventListener('click', openPrescriptionLogModal);
-      
-      // Вкладки
-      document.getElementById('tab-ACTIVE')?.addEventListener('click', () => setScheduleTab('ACTIVE'));
-      document.getElementById('tab-ALL_HISTORY')?.addEventListener('click', () => setScheduleTab('ALL_HISTORY'));
-      document.getElementById('tab-ARCHIVE')?.addEventListener('click', () => setScheduleTab('ARCHIVE'));
-      document.getElementById('btnNewPatient')?.addEventListener('click', openNewPatientModal);
-      
-      document.getElementById('searchInput')?.addEventListener('input', renderScheduleList);
-
+    window.onload = () => {
       syncWithGoogleSheets(false);
       renderScheduleList();
-    });
+    };
   </script>
 </body>
 </html>
