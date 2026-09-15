@@ -460,4 +460,1728 @@
       if (!d || isNaN(d.getTime())) return '';
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).p
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatDateDDMMYYYY(input) {
+      const d = parseDateToObj(input);
+      if (!d) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${day}/${month}/${d.getFullYear()}`;
+    }
+
+    // День недели на иврите (строго с воскресенья: יום ראשון)
+    function getHebrewDayName(input) {
+      const d = parseDateToObj(input);
+      if (!d) return '';
+      const days = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת"];
+      return days[d.getDay()];
+    }
+
+    function cleanTimeString(t) {
+      if (!t) return '';
+      const str = String(t);
+      if (str.includes('1899') || str.includes('T')) {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+      }
+      const match = str.match(/\b(\d{1,2}:\d{2})\b/);
+      return match ? match[1] : '';
+    }
+
+    function formatTzDisplay(tz) {
+      if (!tz) return '';
+      const clean = String(tz).replace(/\D/g, '');
+      if (clean.length === 9) {
+        return `${clean.slice(0,3)}-${clean.slice(3,6)}-${clean.slice(6)}`;
+      }
+      return String(tz);
+    }
+
+    function formatPhoneDisplay(phone) {
+      if (!phone) return '';
+      const clean = String(phone).replace(/\D/g, '');
+      if (clean.length === 10 && clean.startsWith('05')) {
+        return `${clean.slice(0,3)}-${clean.slice(3,6)}-${clean.slice(6,8)}-${clean.slice(8)}`;
+      }
+      return String(phone);
+    }
+
+    function getWhatsAppInternationalLink(phone) {
+      if (!phone) return '#';
+      const digits = String(phone).replace(/\D/g, '');
+      if (!digits) return '#';
+      const intl = digits.startsWith('0') ? '972' + digits.slice(1) : (digits.startsWith('972') ? digits : '972' + digits);
+      return `https://wa.me/${intl}`;
+    }
+
+    function calculateAge(birthDateStr) {
+      const d = parseDateToObj(birthDateStr);
+      if (!d) return '';
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+      return age > 0 ? age : '';
+    }
+
+    function getFilmsQuantityWordsHebrew(qtyNum) {
+      const map = {
+        1: "פילם אחד (1)", 7: "שבעה (7) פילמים", 14: "ארבעה עשר (14) פילמים",
+        28: "עשרים ושמונה (28) פילמים", 42: "ארבעים ושניים (42) פילמים",
+        56: "חמישים ושישה (56) פילמים", 84: "שמונים וארבעה (84) פילמים",
+        112: "מאה ושניים עשר (112) פילמים"
+      };
+      return map[qtyNum] || `${qtyNum} יחידות`;
+    }
+
+    function decomposeSuboxoneTotalMg(totalMg) {
+      const mg = parseInt(totalMg) || 16;
+      const films8 = Math.floor(mg / 8);
+      const rem = mg % 8;
+      const films2 = Math.ceil(rem / 2);
+      let lines = [];
+
+      if (films8 > 0) {
+        lines.push({
+          id: "SUB_8",
+          nameHe: 'סובוקסון פילם 8 מ"ג / 2 מ"ג',
+          nameEn: "SUBOXONE FILM 8 MG / 2 MG",
+          inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 8 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 2 MG",
+          strengthMg: 8,
+          isSuboxone: true,
+          filmsPerDay: films8,
+          inst: films8 === 1 ? 'פילם אחד (8 מ"ג) פעם ביום מתחת ללשון' : `${films8} פילמים של 8 מ"ג ביום מתחת ללשון`
+        });
+      }
+      if (films2 > 0) {
+        lines.push({
+          id: "SUB_2",
+          nameHe: 'סובוקסון פילם 2 מ"ג / 0.5 מ"ג',
+          nameEn: "SUBOXONE FILM 2 MG / 0.5 MG",
+          inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 2 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 0.5 MG",
+          strengthMg: 2,
+          isSuboxone: true,
+          filmsPerDay: films2,
+          inst: films2 === 1 ? 'פילם אחד (2 מ"ג) פעם ביום מתחת ללשון' : `${films2} פילמים של 2 מ"ג ביום מתחת ללשון`
+        });
+      }
+      return lines;
+    }
+
+    // Точный расчет индикатора запаса
+    function getPatientTimingBadge(patId, currentVisitDateStr) {
+      const currDate = parseDateToObj(currentVisitDateStr);
+      if (!currDate) return '';
+
+      const completedVisits = visits.filter(v => v.patientId === patId && v.status === 'DONE' && (parseInt(v.days) > 0));
+      if (completedVisits.length === 0) return '';
+
+      const pastVisits = completedVisits.filter(v => {
+        const d = parseDateToObj(v.date);
+        return d && d < currDate;
+      }).sort((a,b) => (parseDateToObj(b.date) || 0) - (parseDateToObj(a.date) || 0));
+
+      if (pastVisits.length === 0) return '';
+
+      const lastV = pastVisits[0];
+      const lastDate = parseDateToObj(lastV.date);
+      const days = parseInt(lastV.days) || 0;
+      const coverageEndDate = new Date(lastDate.getTime() + days * 86400000);
+
+      const diffDays = Math.round((currDate.getTime() - coverageEndDate.getTime()) / 86400000);
+
+      if (diffDays > 0) {
+        return `<span class="bg-rose-100 text-rose-950 font-bold px-2 py-0.5 rounded text-[11px] border border-rose-300">⚠️ איחור של ${diffDays} ימים (תרופות אזלו ב-${formatDateDDMMYYYY(coverageEndDate)})</span>`;
+      } else if (diffDays === 0) {
+        return `<span class="bg-emerald-100 text-emerald-950 font-bold px-2 py-0.5 rounded text-[11px] border border-emerald-300">✓ הגעה יום ביומו (בזמן)</span>`;
+      } else {
+        return `<span class="bg-blue-100 text-blue-950 font-bold px-2 py-0.5 rounded text-[11px] border border-blue-300">ℹ️ הקדמה של ${Math.abs(diffDays)} ימים (נותרו תרופות)</span>`;
+      }
+    }
+
+    // Отображение дозы на карточке
+    function getVisitTreatmentDisplayHtml(v, isDone, patId) {
+      let sublocadeMg = parseInt(v.sublocade_mg) || 0;
+      let bridgingMg = parseInt(v.bridging_mg) || 0;
+      let bridgingDays = parseInt(v.bridging_days) || 0;
+      let subMg = parseInt(v.sub_daily_mg) || ((parseInt(v.sub_8) || 0)*8 + (parseInt(v.sub_2) || 0)*2);
+      let selincro = parseInt(v.selincro_qty) || 0;
+
+      let inductionText = "";
+      if (v.visitType === 'אינדוקציה' && (v.induction_clinic_mg || v.induction_home_mg)) {
+        inductionText = `אינדוקציה: ${v.induction_clinic_mg || 0} מ"ג במרפאה + ${v.induction_home_mg || 0} מ"ג הביתה`;
+      }
+
+      if (isDone) {
+        if (sublocadeMg > 0) {
+          let text = `סובלוקייד ${sublocadeMg} מ"ג (זריקה)`;
+          if (bridgingMg > 0) text += ` + השלמת סובוקסון ${bridgingMg} מ"ג (${bridgingDays} ימים)`;
+          return `<div class="font-black text-slate-950 text-sm mt-0.5">${text}</div>`;
+        }
+        if (inductionText) {
+          return `<div class="font-black text-slate-950 text-sm mt-0.5">${inductionText}</div>`;
+        }
+        if (subMg > 0) {
+          return `<div class="font-black text-slate-950 text-sm mt-0.5">סובוקסון ${subMg} מ"ג (${v.sub_8 ? `8מ"ג×${v.sub_8}` : ''}${v.sub_2 ? ` 2מ"ג×${v.sub_2}` : ''}) ל-${v.days || 0} ימים</div>`;
+        }
+        if (selincro > 0) {
+          return `<div class="font-black text-slate-950 text-sm mt-0.5">סלינקרו 18 מ"ג (${selincro} כדורים)</div>`;
+        }
+        return `<div class="font-black text-slate-950 text-sm mt-0.5">${v.med || 'התקיים ביקור'} (${v.days || 0} ימים)</div>`;
+      } else {
+        const patVisits = visits.filter(x => x.patientId === patId && x.status === 'DONE').sort((a,b) => (parseDateToObj(b.date) || 0) - (parseDateToObj(a.date) || 0));
+        let projectedText = "משוער: סובוקסון 16 מ\"ג [8מ\"ג×2]";
+        if (patVisits.length > 0) {
+          const last = patVisits[0];
+          let lastSublocade = parseInt(last.sublocade_mg) || 0;
+          let lastSubMg = parseInt(last.sub_daily_mg) || ((parseInt(last.sub_8) || 0)*8 + (parseInt(last.sub_2) || 0)*2);
+          
+          if (lastSublocade > 0) {
+            projectedText = `משוער: זריקת סובלוקייד ${lastSublocade} מ"ג`;
+            if (last.bridging_mg > 0) projectedText += ` + השלמה ${last.bridging_mg} מ"ג`;
+          } else if (lastSubMg > 0) {
+            projectedText = `משוער: סובוקסון ${lastSubMg} מ"ג [${last.sub_8 ? `8מ"ג×${last.sub_8}` : ''}${last.sub_2 ? ` 2מ"ג×${last.sub_2}` : ''}]`;
+          }
+        }
+        return `<div class="mt-0.5"><span class="font-bold text-sky-900 bg-slate-200/90 border border-slate-300 px-2 py-0.5 rounded text-xs inline-block italic">(${projectedText})</span></div>`;
+      }
+    }
+
+    // Умный поиск с учетом пробелов и любого порядка слов
+    function checkPatientSearchMatch(p, query) {
+      if (!query) return true;
+      const searchWords = query.trim().toLowerCase().split(/\s+/);
+      
+      const fullText = (
+        String(p.nameHe || '') + ' ' +
+        String(p.nameRu || '') + ' ' +
+        String(p.tz || '').replace(/[-\s+]/g, '') + ' ' +
+        String(p.tz || '') + ' ' +
+        String(p.phone || '').replace(/[-\s]/g, '') + ' ' +
+        String(p.phone || '') + ' ' +
+        String(p.diagnosis || '') + ' ' +
+        String(p.clinic || '')
+      ).toLowerCase();
+
+      return searchWords.every(word => {
+        const cleanWord = word.replace(/[-\s+]/g, '');
+        return fullText.includes(word) || (cleanWord && fullText.includes(cleanWord));
+      });
+    }
+
+    // ===========================================================================
+    // ПАНЕЛЬ 1: ЖУРНАЛ ВИЗИТОВ СЛЕВА (С ЦВЕТОВЫМ РАЗДЕЛЕНИЕМ ДАТ И НАГРУЗКОЙ)
+    // ===========================================================================
+    function renderScheduleList() {
+      const container = document.getElementById('scheduleContainer');
+      const query = document.getElementById('searchInput').value;
+      container.innerHTML = '';
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const todayStr = toDateInputFormat(today);
+
+      // Подсчет нагрузки: сколько пациентов записано на каждую дату
+      const dateWorkloadMap = {};
+      visits.forEach(v => {
+        if (v.date) {
+          const dKey = toDateInputFormat(v.date);
+          dateWorkloadMap[dKey] = (dateWorkloadMap[dKey] || 0) + 1;
+        }
+      });
+
+      let list = [];
+
+      if (filterOnlyPatientId) {
+        visits.filter(v => v.patientId === filterOnlyPatientId).forEach(v => {
+          const pat = patients.find(p => p.id === v.patientId);
+          if (pat) list.push({ ...v, patient: pat });
+        });
+      } else if (currentScheduleTab === 'ACTIVE') {
+        patients.forEach(pat => {
+          if (pat.status === 'DISCHARGED') return;
+          const patVisits = visits.filter(v => v.patientId === pat.id);
+          const futureVisits = patVisits.filter(v => {
+            const d = parseDateToObj(v.date);
+            return d && d >= today;
+          });
+
+          if (futureVisits.length > 0) {
+            futureVisits.forEach(fv => list.push({ ...fv, patient: pat }));
+          } else {
+            const hasMissed = patVisits.some(v => v.status === 'MISSED' || (v.date && toDateInputFormat(v.date) < todayStr && v.status !== 'DONE'));
+            if (hasMissed) {
+              list.push({
+                id: 'unresolved_' + pat.id,
+                patientId: pat.id,
+                date: '',
+                time: '',
+                status: 'MISSED',
+                days: 0,
+                notes: 'דורש תיאום מועד חדש',
+                patient: pat
+              });
+            }
+          }
+        });
+      } else if (currentScheduleTab === 'ALL_HISTORY') {
+        visits.forEach(v => {
+          const pat = patients.find(p => p.id === v.patientId);
+          if (pat) list.push({ ...v, patient: pat });
+        });
+      } else if (currentScheduleTab === 'PATIENT_ONLY') {
+        if (selectedPatientId) {
+          visits.filter(v => v.patientId === selectedPatientId).forEach(v => {
+            const pat = patients.find(p => p.id === v.patientId);
+            if (pat) list.push({ ...v, patient: pat });
+          });
+        }
+      } else if (currentScheduleTab === 'ARCHIVE') {
+        patients.filter(p => p.status === 'DISCHARGED').forEach(pat => {
+          list.push({
+            id: 'arch_' + pat.id,
+            patientId: pat.id,
+            date: '',
+            time: '',
+            status: 'DISCHARGED',
+            days: 0,
+            notes: pat.dischargeReason || 'סיום טיפול',
+            patient: pat
+          });
+        });
+      }
+
+      if (currentClinicFilter !== 'ALL' && !filterOnlyPatientId) {
+        list = list.filter(item => item.patient.clinic === currentClinicFilter);
+      }
+
+      if (query) {
+        list = list.filter(item => checkPatientSearchMatch(item.patient, query));
+      }
+
+      list.sort((a, b) => {
+        const da = parseDateToObj(a.date);
+        const db = parseDateToObj(b.date);
+        if (!da && db) return -1;
+        if (da && !db) return 1;
+        if (!da && !db) return 0;
+        return da - db;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-bold text-xs">אין תורים להצגה בקטגוריה זו.</div>`;
+        return;
+      }
+
+      list.forEach(v => {
+        const p = v.patient;
+        const isSelectedVisit = (v.id === editingVisitId) || (p.id === selectedPatientId && !editingVisitId);
+        const isDone = (v.status === 'DONE');
+        const vDateObj = parseDateToObj(v.date);
+        const vDateYMD = vDateObj ? toDateInputFormat(vDateObj) : '';
+        
+        // ПУНКТ 1: СТРОГАЯ ПРОВЕРКА ПРОСРОЧЕННОГО ВИЗИТА
+        const isMissed = (v.status === 'MISSED') || (!isDone && vDateObj && vDateYMD < todayStr) || (!v.date && v.status === 'MISSED');
+        const isPatientFiltered = (filterOnlyPatientId === p.id);
+
+        let isWithinWeek = false;
+        let daysUntil = 999;
+        if (vDateObj && !isDone && !isMissed) {
+          daysUntil = Math.ceil((vDateObj.getTime() - today.getTime()) / 86400000);
+          if (daysUntil >= 0 && daysUntil <= 7) isWithinWeek = true;
+        }
+
+        const cleanTime = cleanTimeString(v.time);
+        const timingBadge = getPatientTimingBadge(p.id, v.date);
+        const treatmentHtml = getVisitTreatmentDisplayHtml(v, isDone, p.id);
+        const hebrewDay = v.date ? getHebrewDayName(v.date) : '';
+        const dayWorkload = vDateYMD ? (dateWorkloadMap[vDateYMD] || 1) : 0;
+
+        // ПУНКТ 3: ЦВЕТОВОЕ РАЗДЕЛЕНИЕ КАРТОЧЕК НА РАЗНЫЕ ДАТЫ
+        let cardBgClass = "bg-white border-slate-300 hover:border-slate-400";
+        if (isSelectedVisit) {
+          cardBgClass = "bg-indigo-50 border-indigo-600 shadow-md ring-2 ring-indigo-500";
+        } else if (isMissed) {
+          cardBgClass = "bg-rose-50 border-rose-300 hover:border-rose-400";
+        } else if (isWithinWeek) {
+          cardBgClass = "bg-amber-50/90 border-amber-400 shadow-sm ring-1 ring-amber-300";
+        } else if (vDateObj) {
+          // Разделение по четным и нечетным дням месяца
+          cardBgClass = (vDateObj.getDate() % 2 === 0) 
+            ? "bg-blue-50/50 border-blue-200 hover:border-blue-300" 
+            : "bg-amber-50/40 border-amber-200 hover:border-amber-300";
+        }
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border cursor-pointer transition flex flex-col gap-1.5 ${cardBgClass}`;
+        
+        card.onclick = () => { 
+          selectedPatientId = p.id;
+          editingVisitId = v.id.startsWith('unresolved_') || v.id.startsWith('arch_') ? null : v.id;
+          renderScheduleList(); 
+          renderPatientView(); 
+        };
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-1.5 font-mono">
+              <span class="font-black text-sm ${isMissed ? 'text-rose-700' : 'text-indigo-950'}">
+                📅 ${v.date ? `${hebrewDay}, ${formatDateDDMMYYYY(v.date)}` : 'לא נקבע תאריך'}
+              </span>
+              ${cleanTime ? `<span class="text-xs text-slate-700 font-bold">(${cleanTime})</span>` : ''}
+            </div>
+
+            <div class="flex items-center gap-1">
+              ${isWithinWeek ? `
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 border border-amber-300">
+                  ⚡ בשבוע הקרוב
+                </span>
+              ` : ''}
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                isMissed ? 'bg-rose-600 text-white' : isDone ? 'bg-emerald-100 text-emerald-900' : 'bg-slate-200 text-slate-800'
+              }">
+                ${isMissed ? 'לא הגיע (דורש תיאום)' : isDone ? 'בוצע' : 'מתוכנן'}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center pt-0.5">
+            <div class="font-black text-base text-slate-950">${p.nameHe}</div>
+            
+            <div class="flex items-center gap-1.5">
+              <!-- КНОПКА ФИЛЬТРАЦИИ ТОЛЬКО ЭТОГО ПАЦИЕНТА -->
+              <button onclick="toggleFilterPatientOnly(event, '${p.id}')" class="px-2 py-0.5 rounded-lg text-xs font-bold border transition ${isPatientFiltered ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'}">
+                ${isPatientFiltered ? '✕ בטל סינון' : '👤 רק מטופל זה'}
+              </button>
+              <span class="text-xs font-bold bg-slate-200 text-slate-800 px-2 py-0.5 rounded">${p.clinic}</span>
+            </div>
+          </div>
+
+          <!-- ПУНКТ 4: БЕЙДЖ НАГРУЗКИ (СКОЛЬКО ПАЦИЕНТОВ В ЭТОТ ДЕНЬ) -->
+          ${dayWorkload > 0 ? `
+            <div class="text-[11px] text-slate-600 font-bold flex items-center gap-1">
+              <span>👥 עומס תורים ביום זה:</span> <span class="bg-white/90 px-1.5 py-0.2 rounded border text-slate-900">${dayWorkload} מטופלים</span>
+            </div>
+          ` : ''}
+
+          ${treatmentHtml}
+
+          ${v.notes ? `<div class="text-[11px] text-indigo-950 truncate font-semibold mt-0.5">הערה: ${v.notes}</div>` : ''}
+          ${timingBadge ? `<div class="mt-0.5">${timingBadge}</div>` : ''}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function toggleFilterPatientOnly(event, patId) {
+      event.stopPropagation();
+      if (filterOnlyPatientId === patId) {
+        filterOnlyPatientId = null;
+      } else {
+        filterOnlyPatientId = patId;
+        selectedPatientId = patId;
+      }
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    // ===========================================================================
+    // ПУНКТ 5: АВТОПОДБОР ВРЕМЕНИ С ШАГОМ 20 МИНУТ С 15:00
+    // ===========================================================================
+    function getNextAvailableTimeSlot(targetDateStr) {
+      if (!targetDateStr) return "15:00";
+      const targetDate = parseDateToObj(targetDateStr);
+      if (!targetDate) return "15:00";
+      
+      const targetYMD = toDateInputFormat(targetDate);
+      const dayVisits = visits.filter(v => {
+        const vd = parseDateToObj(v.date);
+        return vd && toDateInputFormat(vd) === targetYMD && v.status !== 'MISSED';
+      });
+
+      const takenTimes = dayVisits.map(v => cleanTimeString(v.time)).filter(Boolean);
+
+      let currentMinutes = 15 * 60; // 15:00
+      const endMinutes = 21 * 60;   // 21:00
+
+      while (currentMinutes < endMinutes) {
+        const hh = String(Math.floor(currentMinutes / 60)).padStart(2, '0');
+        const mm = String(currentMinutes % 60).padStart(2, '0');
+        const candidate = `${hh}:${mm}`;
+
+        if (!takenTimes.includes(candidate)) {
+          return candidate;
+        }
+        currentMinutes += 20; // Шаг 20 минут
+      }
+      return "15:00";
+    }
+
+    // ===========================================================================
+    // ПАНЕЛЬ 2: ЕДИНЫЙ ИНТЕРФЕЙС ПРИЕМА И РЕДАКТИРОВАНИЯ (СПРАВА)
+    // ===========================================================================
+    function renderPatientView() {
+      const container = document.getElementById('patientViewContainer');
+      const pat = patients.find(p => p.id === selectedPatientId);
+
+      if (!pat) {
+        container.innerHTML = `<div class="m-auto text-slate-500 font-bold text-sm">בחר מטופל או תור מהרשימה</div>`;
+        return;
+      }
+
+      // Все визиты строго по убыванию
+      const patVisits = visits.filter(v => v.patientId === pat.id).sort((a,b) => (parseDateToObj(b.date) || 0) - (parseDateToObj(a.date) || 0));
+      const age = calculateAge(pat.birthDate);
+
+      let activeVisit = editingVisitId ? visits.find(v => v.id === editingVisitId) : null;
+      let isEditingExisting = !!activeVisit;
+
+      // ПУНКТ 2: НАДЕЖНОЕ АВТОКОПИРОВАНИЕ ИЗ ПОСЛЕДНЕГО ПРИЕМА
+      const lastVisit = patVisits.length > 0 ? patVisits[0] : null;
+
+      let initialDate = isEditingExisting ? toDateInputFormat(activeVisit.date) : toDateInputFormat(new Date());
+      let initialTime = isEditingExisting ? cleanTimeString(activeVisit.time) : getNextAvailableTimeSlot(initialDate);
+      let initialStatus = isEditingExisting ? activeVisit.status : "DONE";
+      let initialVisitType = isEditingExisting ? (activeVisit.visitType || "המשך") : (lastVisit ? "המשך" : "חדש");
+      
+      let initialSub8 = isEditingExisting ? (parseInt(activeVisit.sub_8) || 0) : (lastVisit ? (parseInt(lastVisit.sub_8) || 0) : 2);
+      let initialSub2 = isEditingExisting ? (parseInt(activeVisit.sub_2) || 0) : (lastVisit ? (parseInt(lastVisit.sub_2) || 0) : 0);
+      let initialSublocade = isEditingExisting ? (parseInt(activeVisit.sublocade_mg) || 0) : (lastVisit ? (parseInt(lastVisit.sublocade_mg) || 0) : 0);
+      let initialSelincro = isEditingExisting ? (parseInt(activeVisit.selincro_qty) || 0) : (lastVisit ? (parseInt(lastVisit.selincro_qty) || 0) : 0);
+      
+      let initialBridgingMg = isEditingExisting ? (parseInt(activeVisit.bridging_mg) || 0) : (lastVisit ? (parseInt(lastVisit.bridging_mg) || 0) : 0);
+      let initialBridgingDays = isEditingExisting ? (parseInt(activeVisit.bridging_days) || 0) : (lastVisit ? (parseInt(lastVisit.bridging_days) || 0) : 0);
+      let initialBridgingNotes = isEditingExisting ? (activeVisit.bridging_notes || "") : (lastVisit ? (lastVisit.bridging_notes || "") : "");
+
+      let initialInductionClinic = isEditingExisting ? (parseInt(activeVisit.induction_clinic_mg) || 0) : 0;
+      let initialInductionHome = isEditingExisting ? (parseInt(activeVisit.induction_home_mg) || 0) : 0;
+
+      let initialDays = isEditingExisting ? (parseInt(activeVisit.days) || 28) : (lastVisit ? (parseInt(lastVisit.days) || 28) : 28);
+      let initialNotes = isEditingExisting ? (activeVisit.notes || "") : (lastVisit ? (lastVisit.notes || pat.diagnosis || "") : (pat.diagnosis || ""));
+      let initialExtendedNotes = isEditingExisting ? (activeVisit.extended_notes || "") : (lastVisit ? (lastVisit.extended_notes || "") : "");
+
+      let initialSubDailyMg = (initialSub8 * 8) + (initialSub2 * 2);
+
+      const formattedTz = formatTzDisplay(pat.tz);
+      const formattedPhone = formatPhoneDisplay(pat.phone);
+
+      container.innerHTML = `
+        <div class="flex flex-col gap-4">
+          
+          <!-- Шапка карточки пациента -->
+          <div class="flex flex-wrap justify-between items-start gap-3 pb-3 border-b border-slate-300">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-black text-slate-950">${pat.nameHe}</h2>
+                <span class="text-xs bg-indigo-100 text-indigo-900 px-2.5 py-0.5 rounded-lg font-bold">${pat.clinic}</span>
+                <button onclick="openEditPatientModal('${pat.id}')" title="ערוך פרטי מטופל" class="text-indigo-600 hover:text-indigo-800 p-1">
+                  <i class="ph-bold ph-pencil-simple text-base"></i>
+                </button>
+              </div>
+              <div class="flex gap-4 text-xs text-slate-700 mt-1.5 font-mono font-bold">
+                <span><b>ת.ז.:</b> ${formattedTz}</span>
+                <span><b>ת. לידה:</b> ${pat.birthDate} ${age ? `(גיל: ${age})` : ''}</span>
+                <span><b>טלפון:</b> ${formattedPhone}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <a href="tel:${pat.phone}" class="bg-slate-200 hover:bg-slate-300 text-slate-900 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <i class="ph-bold ph-phone-call text-indigo-600 text-sm"></i> ${formattedPhone}
+              </a>
+              <!-- ПУНКТ 6: КНОПКА ОТПРАВКИ УВЕДОМЛЕНИЯ ПО WHATSAPP / SMS -->
+              <button onclick="openAppointmentReminderModal('${pat.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-black shadow flex items-center gap-1.5">
+                <i class="ph-bold ph-paper-plane-tilt text-base"></i> <span>שלח זימון (WhatsApp/SMS)</span>
+              </button>
+              <button onclick="switchToNewVisitMode()" class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-black shadow flex items-center gap-1">
+                <i class="ph-bold ph-plus-circle text-base"></i> <span>➕ ביקור חדש למטופל</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- БАННЕР РЕЖИМА -->
+          <div class="p-3 rounded-2xl border flex justify-between items-center ${isEditingExisting ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-emerald-50 border-emerald-300 text-emerald-950'}">
+            <div class="flex items-center gap-2">
+              <i class="ph-bold ${isEditingExisting ? 'ph-pencil-simple' : 'ph-check-circle'} text-lg"></i>
+              <span class="font-black text-sm">
+                ${isEditingExisting ? `עריכת ביקור מיום: ${formatDateDDMMYYYY(activeVisit.date)}` : `תיעוד ביקור חדש (הנתונים הועתקו מהביקור הקודם)`}
+              </span>
+            </div>
+            ${isEditingExisting ? `
+              <button onclick="switchToNewVisitMode()" class="text-xs font-bold text-amber-900 underline hover:text-amber-700">
+                + עבור לרישום ביקור חדש
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- БЛОК 1: ДАТА, ВРЕМЯ, СТАТУС, ТИП -->
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-300 grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">תאריך ביקור:</label>
+              <input type="date" id="formVisitDate" value="${initialDate}" onchange="onVisitDateChanged()" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-xs bg-white">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">שעה:</label>
+              <input type="text" id="formVisitTime" value="${initialTime}" class="w-full p-2 border border-slate-300 rounded-xl font-mono text-xs bg-white text-center">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">סטטוס הגעה:</label>
+              <select id="formVisitStatus" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-xs bg-white">
+                <option value="DONE" ${initialStatus === 'DONE' ? 'selected' : ''}>התקיים (בוצע)</option>
+                <option value="SCHEDULED" ${initialStatus === 'SCHEDULED' ? 'selected' : ''}>מתוכנן</option>
+                <option value="MISSED" ${initialStatus === 'MISSED' ? 'selected' : ''}>לא הגיע</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">סוג ייעוץ:</label>
+              <select id="formVisitType" onchange="toggleInductionFields(this.value)" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-xs bg-white">
+                <option value="המשך" ${initialVisitType === 'המשך' ? 'selected' : ''}>המשך טיפול</option>
+                <option value="אינדוקציה" ${initialVisitType === 'אינדוקציה' ? 'selected' : ''}>אינדוקציה</option>
+                <option value="חדש" ${initialVisitType === 'חדש' ? 'selected' : ''}>חדש (לפני אינדוקציה)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- БЛОК ИНДУКЦИИ -->
+          <div id="inductionDoseSection" style="display: ${initialVisitType === 'אינדוקציה' ? 'block' : 'none'};" class="bg-amber-50 p-3 rounded-2xl border border-amber-300">
+            <span class="text-xs font-black text-amber-950 block mb-1.5">פרטי מינון אינדוקציה:</span>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-amber-900 text-xs mb-1">מינון שניתן במרפאה (מ"ג):</label>
+                <input type="number" id="formInductionClinic" value="${initialInductionClinic}" class="w-full p-2 border border-amber-300 rounded-xl font-bold bg-white text-xs" placeholder="למשל 10">
+              </div>
+              <div>
+                <label class="block font-bold text-amber-900 text-xs mb-1">מינון שנמסר הביתה (מ"ג):</label>
+                <input type="number" id="formInductionHome" value="${initialInductionHome}" class="w-full p-2 border border-amber-300 rounded-xl font-bold bg-white text-xs" placeholder="למשל 2">
+              </div>
+            </div>
+          </div>
+
+          <!-- БЛОК 2: ПРЕПАРАТЫ -->
+          <div class="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-purple-950 flex items-center gap-1">
+                <i class="ph-bold ph-pill text-purple-700"></i> תכשירים ומינונים (סובוקסון / סובלוקייד / סלינקרו):
+              </span>
+              <span id="formSubDailyMgDisplay" class="text-xs font-black bg-purple-200 text-purple-950 px-2.5 py-1 rounded-lg">
+                סה"כ סובוקסון: ${initialSubDailyMg} מ"ג ביממה
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 bg-white p-3 rounded-xl border border-purple-100">
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">סובוקסון 8 מ"ג (פילמים/יום):</label>
+                <input type="number" id="formSub8" value="${initialSub8}" min="0" oninput="updateSubDailyTotalMg()" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-center text-xs bg-slate-50">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">סובוקסון 2 מ"ג (פילמים/יום):</label>
+                <input type="number" id="formSub2" value="${initialSub2}" min="0" oninput="updateSubDailyTotalMg()" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-center text-xs bg-slate-50">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">סובלוקייד (זריקה):</label>
+                <select id="formSublocade" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-xs bg-slate-50">
+                  <option value="0" ${initialSublocade === 0 ? 'selected' : ''}>ללא</option>
+                  <option value="100" ${initialSublocade === 100 ? 'selected' : ''}>100 מ"ג</option>
+                  <option value="300" ${initialSublocade === 300 ? 'selected' : ''}>300 מ"ג</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">סלינקרו 18 מ"ג (כדורים/יום):</label>
+                <input type="number" id="formSelincro" value="${initialSelincro}" min="0" class="w-full p-2 border border-slate-300 rounded-xl font-bold text-center text-xs bg-slate-50">
+              </div>
+            </div>
+
+            <!-- БЛОК השלמת טיפול -->
+            <div class="bg-white p-3 rounded-xl border border-purple-200 flex flex-col gap-2">
+              <span class="font-black text-xs text-purple-900">השלמת טיפול (סובוקסון במקביל לסובלוקייד):</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-slate-600 text-[11px] font-bold">מינון השלמה (מ"ג ליום):</label>
+                  <input type="number" id="formBridgingMg" value="${initialBridgingMg}" class="w-full p-1.5 border rounded-lg text-xs font-bold bg-slate-50" placeholder="למשל 2 או 4 מ''ג">
+                </div>
+                <div>
+                  <label class="block text-slate-600 text-[11px] font-bold">למשך (ימים):</label>
+                  <input type="number" id="formBridgingDays" value="${initialBridgingDays}" class="w-full p-1.5 border rounded-lg text-xs font-bold bg-slate-50" placeholder="למשל 7">
+                </div>
+                <div>
+                  <label class="block text-slate-600 text-[11px] font-bold">הנחיות להשלמה:</label>
+                  <input type="text" id="formBridgingNotes" value="${initialBridgingNotes}" class="w-full p-1.5 border rounded-lg text-xs bg-slate-50" placeholder="למשל: בימים 1-7 לפי צורך">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- БЛОК 3: СРОК ЛЕЧЕНИЯ, ДАТА СЛЕДУЮЩЕГО ВИЗИТА И КНОПКА "НАЗНАЧИТЬ ПРИЕМ" -->
+          <div class="bg-indigo-50 p-3.5 rounded-2xl border border-indigo-200 flex flex-col gap-2.5">
+            <span class="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+              <i class="ph-bold ph-calendar-check text-indigo-700"></i> תקופת טיפול, חישוב תור וקביעת מועד הבא:
+            </span>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-xl border border-indigo-100">
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">ימי כיסוי תרופתי:</label>
+                <div class="flex gap-1">
+                  <button type="button" onclick="onDaysPresetClick(7)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs">7</button>
+                  <button type="button" onclick="onDaysPresetClick(14)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs">14</button>
+                  <button type="button" onclick="onDaysPresetClick(28)" class="px-2.5 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-950 rounded-lg font-black text-xs">28</button>
+                  <input type="number" id="formDaysInput" value="${initialDays}" oninput="onDaysInputChanged(this.value)" class="w-14 p-1 border border-slate-300 rounded-lg text-center font-black text-xs bg-white">
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-indigo-950 text-xs mb-1">תור הבא (מחושב / מותאם):</label>
+                <input type="date" id="formNextDateInput" onchange="onNextDateInputChanged(this.value)" class="w-full p-1.5 border-2 border-indigo-500 rounded-lg text-xs font-black bg-indigo-50/50 font-mono">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 text-xs mb-1">שעת תור הבא (שובץ אוטומטית):</label>
+                <input type="text" id="formNextTimeInput" value="15:00" class="w-full p-1.5 border border-slate-300 rounded-lg text-xs font-mono text-center bg-white">
+              </div>
+            </div>
+
+            <!-- КНОПКА "НАЗНАЧИТЬ ЭТОТ ПРИЕМ" -->
+            <div class="flex justify-end">
+              <button onclick="scheduleNextAppointmentOnly('${pat.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-black shadow flex items-center gap-1.5">
+                <i class="ph-bold ph-calendar-plus text-base"></i> <span>קבע תור זה למועד המחושב</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- БЛОК 4: ЗАМЕТКИ И РАСШИРЕННОЕ СВОБОДНОЕ ПОЛЕ -->
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-300 flex flex-col gap-3">
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">אבחנה והערות קצרות לביקור:</label>
+              <textarea id="formVisitNotes" rows="2" class="w-full p-2 border border-slate-300 rounded-xl text-xs font-bold bg-white" placeholder="הערות קליניות, שינויים במינון...">${initialNotes}</textarea>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-800 text-xs mb-1">תיעוד מורחב, מכתב רפואי וסיכום מפורט:</label>
+              <textarea id="formExtendedNotes" rows="4" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white font-mono" placeholder="הדבק כאן סיכום רפואי מלא, תוצאות בדיקות דם, שתן, מכתבי שחרור והמלצות מורחבות...">${initialExtendedNotes}</textarea>
+            </div>
+          </div>
+
+          <!-- КНОПКИ ДЕЙСТВИЙ -->
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="saveCurrentVisitFromForm()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow">
+              <i class="ph-bold ph-floppy-disk text-lg"></i> שמור ביקור וסנכרן בענן Google Sheets
+            </button>
+
+            <button onclick="printRxForFormVisit()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-3 rounded-xl text-xs font-black flex items-center gap-1.5 shadow">
+              <i class="ph-bold ph-printer text-base"></i> הדפס מרשם (A4)
+            </button>
+
+            ${isEditingExisting ? `
+              <button onclick="deleteCurrentVisit('${activeVisit.id}')" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-3 rounded-xl text-xs font-black shadow flex items-center gap-1">
+                <i class="ph-bold ph-trash text-base"></i> מחק ביקור זה
+              </button>
+            ` : ''}
+
+            <button onclick="markPatientNoShowNow('${pat.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 px-3.5 py-3 rounded-xl text-xs font-bold flex items-center gap-1">
+              <i class="ph-bold ph-user-minus"></i> לא הגיע (+7 ימים)
+            </button>
+
+            <button onclick="dischargePatientNow('${pat.id}')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-3 rounded-xl text-xs font-bold">
+              סיום טיפול
+            </button>
+          </div>
+
+          <!-- БЛОК 5: ВСЕ ПРЕДЫДУЩИЕ ВИЗИТЫ -->
+          <div class="flex flex-col gap-2 mt-2 pt-3 border-t border-slate-300">
+            <h4 class="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
+              <i class="ph-bold ph-clock-counter-clockwise text-indigo-600"></i> כל הביקורים הקודמים (${patVisits.length}) — לחץ לעריכה:
+            </h4>
+
+            <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pl-1">
+              ${patVisits.map(v => `
+                <div onclick="loadVisitIntoForm('${v.id}')" class="bg-white hover:bg-indigo-50/70 p-2.5 rounded-xl border ${v.id === editingVisitId ? 'border-indigo-600 ring-2 ring-indigo-400' : 'border-slate-300'} text-xs flex flex-col gap-1 shadow-sm cursor-pointer transition">
+                  <div class="flex justify-between items-center font-mono">
+                    <span class="font-black text-indigo-950">📅 ${formatDateDDMMYYYY(v.date)}</span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="${v.status === 'DONE' ? 'text-emerald-700 font-bold' : v.status === 'MISSED' ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold'}">
+                        ${v.status === 'DONE' ? 'התקיים' : v.status === 'MISSED' ? 'לא הגיע' : 'מתוכנן'}
+                      </span>
+                      <span class="text-indigo-700 font-bold underline mr-1 text-[11px]">ערוך ✏️</span>
+                    </div>
+                  </div>
+                  <div class="text-slate-800 font-bold">${v.med || 'ביקור'} (${v.days || 0} ימים)</div>
+                  ${v.notes ? `<p class="text-slate-600 italic text-[11px]">"${v.notes}"</p>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      recalculateNextDateFromDays(initialDays);
+    }
+
+    function toggleInductionFields(val) {
+      const sec = document.getElementById('inductionDoseSection');
+      if (sec) sec.style.display = (val === 'אינדוקציה') ? 'block' : 'none';
+    }
+
+    function loadVisitIntoForm(visitId) {
+      editingVisitId = visitId;
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function switchToNewVisitMode() {
+      editingVisitId = null;
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function updateSubDailyTotalMg() {
+      const sub8 = parseInt(document.getElementById('formSub8')?.value) || 0;
+      const sub2 = parseInt(document.getElementById('formSub2')?.value) || 0;
+      const total = (sub8 * 8) + (sub2 * 2);
+      const disp = document.getElementById('formSubDailyMgDisplay');
+      if (disp) disp.innerText = `סה"כ סובוקסון: ${total} מ"ג ביממה`;
+    }
+
+    // ДВУСТОРОННИЙ РАСЧЕТ ДАТЫ И ДНЕЙ
+    function onDaysPresetClick(days) {
+      const daysInput = document.getElementById('formDaysInput');
+      if (daysInput) daysInput.value = days;
+      recalculateNextDateFromDays(days);
+    }
+
+    function onDaysInputChanged(val) {
+      const days = parseInt(val) || 0;
+      recalculateNextDateFromDays(days);
+    }
+
+    function recalculateNextDateFromDays(days) {
+      const visitDateInput = document.getElementById('formVisitDate');
+      const nextDateInput = document.getElementById('formNextDateInput');
+      const nextTimeInput = document.getElementById('formNextTimeInput');
+      if (!visitDateInput || !nextDateInput) return;
+
+      let vDate = parseDateToObj(visitDateInput.value) || new Date();
+      const nextDateObj = new Date(vDate.getFullYear(), vDate.getMonth(), vDate.getDate() + days);
+      const nextDateStr = toDateInputFormat(nextDateObj);
+      nextDateInput.value = nextDateStr;
+
+      // Автоматический подбор 20-минутного слота
+      if (nextTimeInput) {
+        nextTimeInput.value = getNextAvailableTimeSlot(nextDateStr);
+      }
+    }
+
+    function onNextDateInputChanged(nextDateStr) {
+      const visitDateInput = document.getElementById('formVisitDate');
+      const daysInput = document.getElementById('formDaysInput');
+      const nextTimeInput = document.getElementById('formNextTimeInput');
+      if (!visitDateInput || !daysInput || !nextDateStr) return;
+
+      const vDate = parseDateToObj(visitDateInput.value) || new Date();
+      const nextDate = parseDateToObj(nextDateStr);
+      if (!nextDate) return;
+
+      const diffDays = Math.round((nextDate.getTime() - vDate.getTime()) / 86400000);
+      if (diffDays >= 0) {
+        daysInput.value = diffDays;
+      }
+      if (nextTimeInput) {
+        nextTimeInput.value = getNextAvailableTimeSlot(nextDateStr);
+      }
+    }
+
+    function onVisitDateChanged() {
+      const daysInput = document.getElementById('formDaysInput');
+      const days = parseInt(daysInput ? daysInput.value : '28') || 28;
+      recalculateNextDateFromDays(days);
+    }
+
+    // ===========================================================================
+    // ПУНКТ 6: ФУНКЦИИ ОТПРАВКИ УВЕДОМЛЕНИЯ ПАЦИЕНТУ (WHATSAPP / SMS)
+    // ===========================================================================
+    let currentReminderPatient = null;
+
+    function openAppointmentReminderModal(patId) {
+      currentReminderPatient = patients.find(p => p.id === patId);
+      if (!currentReminderPatient) return;
+
+      const nextDateVal = document.getElementById('formNextDateInput')?.value || toDateInputFormat(new Date());
+      const nextTimeVal = document.getElementById('formNextTimeInput')?.value || "15:00";
+      
+      const hebrewDay = getHebrewDayName(nextDateVal);
+      const formattedDate = formatDateDDMMYYYY(nextDateVal);
+
+      // СТРОГО НЕЙТРАЛЬНЫЙ ТЕКСТ (БЕЗ УПОМИНАНИЯ ВРАЧА, НАРКОЛОГИИ ИЛИ СУБОКСОНА)
+      const msg = `שלום ${currentReminderPatient.nameHe},
+נקבע עבורך תור ל${hebrewDay}, ${formattedDate} בשעה ${nextTimeVal}.
+מיקום: רמב''ם, בניין ספנסר (בניין מס' 11) קומה 3.
+לצפייה במפה > https://www.rambam.org.il/maps/bld_11/
+ומפת הגעה > https://maps.app.goo.gl/nftLXFKSxaRTiLqM9
+
+נא לאשר הגעה בהודעה חוזרת: "מאשר" או "לא מגיע".`;
+
+      document.getElementById('reminderMessageText').value = msg;
+      document.getElementById('reminderPhoneDisplay').innerText = `טלפון: ${formatPhoneDisplay(currentReminderPatient.phone)}`;
+      openModalDirect('appointmentReminderModal');
+    }
+
+    function sendAppointmentViaWhatsApp() {
+      if (!currentReminderPatient) return;
+      const text = encodeURIComponent(document.getElementById('reminderMessageText').value);
+      const digits = String(currentReminderPatient.phone).replace(/\D/g, '');
+      const intl = digits.startsWith('0') ? '972' + digits.slice(1) : (digits.startsWith('972') ? digits : '972' + digits);
+      window.open(`https://wa.me/${intl}?text=${text}`, '_blank');
+      closeModalDirect('appointmentReminderModal');
+    }
+
+    function sendAppointmentViaSms() {
+      if (!currentReminderPatient) return;
+      const text = encodeURIComponent(document.getElementById('reminderMessageText').value);
+      const cleanPhone = String(currentReminderPatient.phone).replace(/\D/g, '');
+      window.open(`sms:${cleanPhone}?body=${text}`, '_blank');
+      closeModalDirect('appointmentReminderModal');
+    }
+
+    // ===========================================================================
+    // НАЗНАЧИТЬ ТОЛЬКО СЛЕДУЮЩИЙ ПРИЕМ
+    // ===========================================================================
+    async function scheduleNextAppointmentOnly(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+
+      const nextDate = document.getElementById('formNextDateInput').value;
+      const nextTime = document.getElementById('formNextTimeInput').value || "15:00";
+      const sub8 = parseInt(document.getElementById('formSub8').value) || 0;
+      const sub2 = parseInt(document.getElementById('formSub2').value) || 0;
+      const sublocade = parseInt(document.getElementById('formSublocade').value) || 0;
+      const selincro = parseInt(document.getElementById('formSelincro').value) || 0;
+      const days = parseInt(document.getElementById('formDaysInput').value) || 28;
+      const subDailyMg = (sub8 * 8) + (sub2 * 2);
+
+      let medDesc = "";
+      if (sublocade > 0) medDesc = `סובלוקייד ${sublocade} מ"ג (זריקה)`;
+      else if (subDailyMg > 0) medDesc = `סובוקסון ${subDailyMg} מ"ג`;
+      else medDesc = "מעקב המשך";
+
+      visits.push({
+        id: "v" + (visits.length + 1),
+        patientId: pat.id,
+        date: nextDate,
+        time: nextTime,
+        status: "SCHEDULED",
+        visitType: "המשך",
+        sub_8: sub8,
+        sub_2: sub2,
+        sub_daily_mg: subDailyMg,
+        sublocade_mg: sublocade,
+        selincro_qty: selincro,
+        days: days,
+        notes: "תור המשך מתוכנן",
+        med: medDesc
+      });
+
+      await saveAllToGoogleSheets(`נקבע תור ל-${formatDateDDMMYYYY(nextDate)} בשעה ${nextTime}!`);
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    async function deleteCurrentVisit(visitId) {
+      if (!confirm("האם אתה בטוח שברצונך למחוק ביקור זה לצמיתות מהמערכת ומ-Google Sheets?")) return;
+
+      const idx = visits.findIndex(v => v.id === visitId);
+      if (idx !== -1) {
+        visits.splice(idx, 1);
+        editingVisitId = null;
+        await saveAllToGoogleSheets("הביקור נמחק בהצלחה!");
+        renderScheduleList();
+        renderPatientView();
+      }
+    }
+
+    // ===========================================================================
+    // СОХРАНЕНИЕ ВИЗИТА
+    // ===========================================================================
+    async function saveCurrentVisitFromForm() {
+      const pat = patients.find(p => p.id === selectedPatientId);
+      if (!pat) return;
+
+      const vDateStr = document.getElementById('formVisitDate').value;
+      const vTime = document.getElementById('formVisitTime').value || "15:00";
+      const status = document.getElementById('formVisitStatus').value;
+      const visitType = document.getElementById('formVisitType').value;
+      const sub8 = parseInt(document.getElementById('formSub8').value) || 0;
+      const sub2 = parseInt(document.getElementById('formSub2').value) || 0;
+      const sublocade = parseInt(document.getElementById('formSublocade').value) || 0;
+      const selincro = parseInt(document.getElementById('formSelincro').value) || 0;
+
+      const bridgingMg = parseInt(document.getElementById('formBridgingMg')?.value) || 0;
+      const bridgingDays = parseInt(document.getElementById('formBridgingDays')?.value) || 0;
+      const bridgingNotes = document.getElementById('formBridgingNotes')?.value || "";
+
+      const indClinic = parseInt(document.getElementById('formInductionClinic')?.value) || 0;
+      const indHome = parseInt(document.getElementById('formInductionHome')?.value) || 0;
+
+      const days = parseInt(document.getElementById('formDaysInput').value) || 28;
+      const nextDate = document.getElementById('formNextDateInput').value;
+      const nextTime = document.getElementById('formNextTimeInput').value || "15:00";
+      const notes = document.getElementById('formVisitNotes').value;
+      const extendedNotes = document.getElementById('formExtendedNotes').value;
+
+      const subDailyMg = (sub8 * 8) + (sub2 * 2);
+
+      let medDesc = "";
+      if (sublocade > 0) {
+        medDesc = `סובלוקייד ${sublocade} מ"ג (זריקה)`;
+        if (bridgingMg > 0) medDesc += ` + השלמה סובוקסון ${bridgingMg} מ"ג`;
+      } else if (subDailyMg > 0) {
+        medDesc = `סובוקסון ${subDailyMg} מ"ג (${sub8 ? `8מ"ג×${sub8}` : ''}${sub2 ? ` 2מ"ג×${sub2}` : ''})`;
+      } else if (selincro > 0) {
+        medDesc = `סלינקרו 18 מ"ג (${selincro} כדורים)`;
+      } else {
+        medDesc = "ייעוץ / ללא תכשיר";
+      }
+
+      pat.defaultDailyMg = subDailyMg > 0 ? subDailyMg : pat.defaultDailyMg;
+      pat.defaultDays = days;
+      pat.status = 'ACTIVE';
+
+      if (editingVisitId) {
+        const v = visits.find(x => x.id === editingVisitId);
+        if (v) {
+          v.date = vDateStr;
+          v.time = vTime;
+          v.status = status;
+          v.visitType = visitType;
+          v.sub_8 = sub8;
+          v.sub_2 = sub2;
+          v.sub_daily_mg = subDailyMg;
+          v.sublocade_mg = sublocade;
+          v.selincro_qty = selincro;
+          v.bridging_mg = bridgingMg;
+          v.bridging_days = bridgingDays;
+          v.bridging_notes = bridgingNotes;
+          v.induction_clinic_mg = indClinic;
+          v.induction_home_mg = indHome;
+          v.days = days;
+          v.coverage_until = nextDate;
+          v.next_date = nextDate;
+          v.notes = notes;
+          v.extended_notes = extendedNotes;
+          v.med = medDesc;
+        }
+      } else {
+        const newId = "v" + (visits.length + 1);
+        visits.push({
+          id: newId,
+          patientId: pat.id,
+          date: vDateStr,
+          time: vTime,
+          status: status,
+          visitType: visitType,
+          sub_8: sub8,
+          sub_2: sub2,
+          sub_daily_mg: subDailyMg,
+          sublocade_mg: sublocade,
+          selincro_qty: selincro,
+          bridging_mg: bridgingMg,
+          bridging_days: bridgingDays,
+          bridging_notes: bridgingNotes,
+          induction_clinic_mg: indClinic,
+          induction_home_mg: indHome,
+          days: days,
+          coverage_until: nextDate,
+          next_date: nextDate,
+          timing_status: "בזמן",
+          notes: notes,
+          extended_notes: extendedNotes,
+          med: medDesc
+        });
+
+        if (status === 'DONE' && nextDate) {
+          visits.push({
+            id: "v" + (visits.length + 2),
+            patientId: pat.id,
+            date: nextDate,
+            time: nextTime,
+            status: "SCHEDULED",
+            visitType: "המשך",
+            sub_8: sub8,
+            sub_2: sub2,
+            sub_daily_mg: subDailyMg,
+            sublocade_mg: sublocade,
+            selincro_qty: selincro,
+            bridging_mg: bridgingMg,
+            bridging_days: bridgingDays,
+            bridging_notes: bridgingNotes,
+            days: days,
+            coverage_until: "",
+            next_date: "",
+            timing_status: "מתוכנן",
+            notes: notes,
+            extended_notes: extendedNotes,
+            med: medDesc
+          });
+        }
+      }
+
+      await saveAllToGoogleSheets("הביקור נשמר וסונכרן בהצלחה ב-Google Sheets!");
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    // ===========================================================================
+    // ПЕЧАТЬ РЕЦЕПТОВ
+    // ===========================================================================
+    function printRxForFormVisit() {
+      const pat = patients.find(p => p.id === selectedPatientId);
+      if (!pat) return;
+
+      const sub8 = parseInt(document.getElementById('formSub8')?.value) || 0;
+      const sub2 = parseInt(document.getElementById('formSub2')?.value) || 0;
+      const sublocade = parseInt(document.getElementById('formSublocade')?.value) || 0;
+      const selincro = parseInt(document.getElementById('formSelincro')?.value) || 0;
+      const bridgingMg = parseInt(document.getElementById('formBridgingMg')?.value) || 0;
+      const bridgingDays = parseInt(document.getElementById('formBridgingDays')?.value) || 0;
+      const days = parseInt(document.getElementById('formDaysInput')?.value) || 28;
+
+      let rxSlipsToPrint = [];
+
+      if (sub8 > 0) {
+        const totalFilms = sub8 * days;
+        rxSlipsToPrint.push({
+          nameEn: "SUBOXONE FILM 8 MG / 2 MG",
+          inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 8 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 2 MG",
+          formDesc: "פילמים לנטילה תת-לשונית או בוקאלית",
+          qtyText: `${getFilmsQuantityWordsHebrew(totalFilms)} (לטיפול של ${days} ימים)`,
+          inst: sub8 === 1 ? 'פילם אחד (8 מ"ג) פעם ביום מתחת ללשון או בוקאלי עד להמסה מלאה' : `${sub8} פילמים של 8 מ"ג ביום מתחת ללשון או בוקאלי עד להמסה מלאה`,
+          isSuboxone: true
+        });
+      }
+
+      if (sub2 > 0) {
+        const totalFilms = sub2 * days;
+        rxSlipsToPrint.push({
+          nameEn: "SUBOXONE FILM 2 MG / 0.5 MG",
+          inn: "BUPRENORPHINE (AS HYDROCHLORIDE) 2 MG, NALOXONE (AS HYDROCHLORIDE DIHYDRATE) 0.5 MG",
+          formDesc: "פילמים לנטילה תת-לשונית או בוקאלית",
+          qtyText: `${getFilmsQuantityWordsHebrew(totalFilms)} (לטיפול של ${days} ימים)`,
+          inst: sub2 === 1 ? 'פילם אחד (2 מ"ג) פעם ביום מתחת ללשון או בוקאלי עד להמסה מלאה' : `${sub2} פילמים של 2 מ"ג ביום מתחת ללשון או בוקאלי עד להמסה מלאה`,
+          isSuboxone: true
+        });
+      }
+
+      if (sublocade > 0) {
+        rxSlipsToPrint.push({
+          nameEn: `SUBLOCADE ${sublocade} MG PREFILLED SYRINGE`,
+          inn: `BUPRENORPHINE DEPOT (EXTENDED-RELEASE SOLUTION FOR INJECTION) ${sublocade} MG`,
+          formDesc: "תמיסה מרוכזת בשחרור מושהה להזרקה תת-עורית",
+          qtyText: "מזרק מוכן אחד (1 יחידה) מראש",
+          inst: "מזרק אחד (1) בהזרקה תת-עורית בבטן פעם ב-28 יום ע''י צוות רפואי בלבד. אין להזריק תוך-ורידית.",
+          isSublocade: true
+        });
+      }
+
+      if (bridgingMg > 0 && bridgingDays > 0) {
+        rxSlipsToPrint.push({
+          nameEn: `SUBOXONE FILM (השלמת טיפול לסובלוקייד)`,
+          inn: "BUPRENORPHINE / NALOXONE SUBLINGUAL FILM",
+          formDesc: "פילמים לנטילה תת-לשונית (השלמת טיפול)",
+          qtyText: `מינון יומי של ${bridgingMg} מ"ג ל-${bridgingDays} ימים`,
+          inst: document.getElementById('formBridgingNotes')?.value || 'לפי הנחיית רופא במקביל לזריקה',
+          isSuboxone: true
+        });
+      }
+
+      if (selincro > 0) {
+        const totalPills = selincro * days;
+        rxSlipsToPrint.push({
+          nameEn: "SELINCRO 18 MG (NALMEFENE)",
+          inn: "NALMEFENE HYDROCHLORIDE DIHYDRATE 18 MG",
+          formDesc: "טבליות מצופות לנטילה פומית",
+          qtyText: `${totalPills} טבליות (לטיפול של ${days} ימים)`,
+          inst: "טבליה אחת דרך הפה לפי הצורך (בימים של סיכון מוגבר לשתיית אלכוהול)",
+          isSelincro: true
+        });
+      }
+
+      if (rxSlipsToPrint.length === 0) return alert("לא נבחרו תכשירים להדפסה.");
+
+      const today = new Date();
+      const issueDateStr = formatDateDDMMYYYY(today.toISOString().split('T')[0]);
+      const expDateObj = new Date(today.getTime() + 15 * 86400000);
+      const expDateStr = formatDateDDMMYYYY(expDateObj.toISOString().split('T')[0]);
+
+      const subDailyMg = (sub8 * 8) + (sub2 * 2);
+      const isOver24 = subDailyMg > 24;
+
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = '';
+
+      rxSlipsToPrint.forEach(item => {
+        const page = document.createElement('div');
+        page.className = 'page-break bg-white text-black font-sans leading-relaxed rtl';
+
+        page.innerHTML = `
+          <div>
+            <div class="border-b-2 border-black pb-2 mb-3 text-center">
+              <h2 class="text-xl font-bold">דרור חיפה - מרכז רפואי לטיפול בהתמכרויות</h2>
+              <p class="text-xs text-slate-700">מבית האגודה לבריאות הציבור ע"ר 580016103 | אופיר 45, חיפה | טל. 04-8677871</p>
+            </div>
+
+            <div class="flex justify-between items-baseline mb-2">
+              <div class="text-sm font-bold">תאריך הוצאה: <span class="font-mono underline">${issueDateStr}</span></div>
+              <div class="text-center font-bold text-base underline">מרשם לתכשיר / סם מסוכן</div>
+              <div class="text-xs font-mono">נוהל 155</div>
+            </div>
+
+            <div class="border border-black p-2.5 mb-3 rounded text-sm">
+              <div class="grid grid-cols-2 gap-2">
+                <div><b>שם המטופל:</b> <span class="text-base font-bold">${pat.nameHe}</span></div>
+                <div><b>ת.ז.:</b> <span class="font-mono font-bold">${formatTzDisplay(pat.tz)}</span></div>
+                <div><b>תאריך לידה:</b> ${pat.birthDate}</div>
+                <div><b>גיל:</b> ${calculateAge(pat.birthDate)} שנים</div>
+              </div>
+            </div>
+
+            <div class="ltr text-left font-serif text-lg font-bold mb-1">Rp.</div>
+            <div class="border-2 border-black p-3.5 mb-3 rounded-lg">
+              <div class="ltr text-left font-bold text-base font-mono mb-1">${item.nameEn}</div>
+              <div class="text-xs text-slate-900 font-bold font-mono mb-2">חומר פעיל: ${item.inn}</div>
+              <div class="text-xs text-slate-700 mb-1">צורת מתן: ${item.formDesc}</div>
+              <div class="text-sm mb-2">
+                <b>כמות מנופקת:</b> <span class="font-bold underline text-base">${item.qtyText}</span>.
+              </div>
+              <div class="text-sm mb-2">
+                <b>הוראות שימוש:</b> ${item.inst}.
+              </div>
+              <div class="text-xs text-slate-700">
+                <b>סיבת הארכה מעל 10 ימים:</b> טיפול אחזקתי במחלה כרונית בהתאם לתקנות ונוהל 155.
+              </div>
+            </div>
+
+            ${(item.isSuboxone && isOver24) ? `
+              <div class="border-2 border-black p-2 mb-3 text-xs bg-slate-50">
+                <b>הודעה מיוחדת בהתאם לסעיף 3.1.9 לנוהל 155 (מינון מעל 24 מ"ג ביממה):</b>
+                <div>המינון הכולל (${subDailyMg} מ"ג ביממה) נקבע עקב אי-יעילות מינון נמוך וקיום תלות אופיואידית כרונית ועמידות.</div>
+                <div>המטופל בעל תעודת בדיקה בתוקף של מרכז גמילה מוכר (תוקף 6 חודשים). המרשם מיועד לתקופה שאינה עולה על חודשיים.</div>
+              </div>
+            ` : ''}
+
+            <div class="text-xs font-bold mb-4">
+              תוקף המרשם: עד לתאריך <span class="font-mono underline font-bold">${expDateStr}</span> (15 ימים בלבד).
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-end border-t border-black pt-3 text-xs mb-3">
+              <div>
+                <div><b>שם הרופא:</b> ${DOCTOR_DETAILS.name}</div>
+                <div><b>מס' רישיון:</b> ${DOCTOR_DETAILS.license}</div>
+              </div>
+              <div class="text-center">
+                <div class="border-b border-dotted border-black w-44 mb-1"></div>
+                <div>חתימת הרופא וחותמת</div>
+              </div>
+            </div>
+
+            <div class="border-t-2 border-black pt-2 text-[10px] text-center text-black leading-tight">
+              דרור חיפה- אופיר 45, חיפה טל. 04.8677871/ פקס. 04.8660097 drorhaifa@publichealth.org.il<br>
+              אגודה לבריאות הציבור ע"ר – 580016103 טל'. 02.5656900 פקס. 02.6727169 www.aguda.co.il
+            </div>
+          </div>
+        `;
+        printArea.appendChild(page);
+      });
+
+      window.print();
+    }
+
+    // ===========================================================================
+    // ПАКЕТНАЯ ВЫПИСКА РЕЦЕПТОВ
+    // ===========================================================================
+    function openBatchPrintModal() {
+      renderBatchPatientList();
+      openModalDirect('batchPrintModal');
+    }
+
+    function setBatchFilterDate(type) {
+      currentBatchDateFilter = type;
+      ['Today', 'Week', 'All'].forEach(k => {
+        const btn = document.getElementById(`btnFilter${k}`);
+        if (btn) btn.className = "px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold";
+      });
+      const activeBtn = document.getElementById(`btnFilter${type.charAt(0) + type.slice(1).toLowerCase()}`);
+      if (activeBtn) activeBtn.className = "px-2.5 py-1.5 bg-indigo-100 text-indigo-950 rounded-lg font-black";
+      renderBatchPatientList();
+    }
+
+    function renderBatchPatientList() {
+      const tbody = document.getElementById('batchPatientsTableBody');
+      tbody.innerHTML = '';
+
+      const clinic = document.getElementById('batchClinicFilter').value;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const todayStr = toDateInputFormat(today);
+
+      let targetPatients = patients.filter(p => p.status !== 'DISCHARGED');
+      if (clinic !== 'ALL') {
+        targetPatients = targetPatients.filter(p => p.clinic === clinic);
+      }
+
+      if (currentBatchDateFilter === 'TODAY') {
+        targetPatients = targetPatients.filter(p => visits.some(v => v.patientId === p.id && v.date === todayStr));
+      } else if (currentBatchDateFilter === 'WEEK') {
+        targetPatients = targetPatients.filter(p => {
+          return visits.some(v => {
+            if (v.patientId !== p.id || !v.date) return false;
+            const d = parseDateToObj(v.date);
+            if (!d) return false;
+            const diff = Math.ceil((d.getTime() - today.getTime()) / 86400000);
+            return diff >= 0 && diff <= 7;
+          });
+        });
+      }
+
+      if (targetPatients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 font-bold">אין מטופלים העונים לסינון שנבחר.</td></tr>`;
+        updateBatchCountBadge();
+        return;
+      }
+
+      targetPatients.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50 transition';
+        const lines = decomposeSuboxoneTotalMg(p.defaultDailyMg || 16);
+        const medDesc = lines.map(l => `${l.nameHe} (${l.filmsPerDay}/יום)`).join(' + ');
+
+        tr.innerHTML = `
+          <td class="p-2.5 text-center">
+            <input type="checkbox" class="batch-pat-checkbox scale-125 accent-purple-700" data-patid="${p.id}" checked onchange="updateBatchCountBadge()">
+          </td>
+          <td class="p-2.5 font-black text-slate-950">${p.nameHe}</td>
+          <td class="p-2.5 font-mono text-slate-700">${formatTzDisplay(p.tz)}</td>
+          <td class="p-2.5 font-bold text-slate-800">${p.clinic}</td>
+          <td class="p-2.5 font-bold text-indigo-950">${medDesc}</td>
+          <td class="p-2.5 text-center">
+            <input type="number" class="batch-days-input w-16 p-1 border border-slate-300 rounded font-bold text-center bg-white" value="${p.defaultDays || 28}">
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateBatchCountBadge();
+    }
+
+    function toggleAllBatch(val) {
+      document.querySelectorAll('.batch-pat-checkbox').forEach(cb => cb.checked = val);
+      updateBatchCountBadge();
+    }
+
+    function updateBatchCountBadge() {
+      const count = document.querySelectorAll('.batch-pat-checkbox:checked').length;
+      document.getElementById('batchCountBadge').innerText = `נבחרו: ${count} מטופלים`;
+    }
+
+    function executeBatchPrint() {
+      const checked = document.querySelectorAll('.batch-pat-checkbox:checked');
+      if (checked.length === 0) return alert("בחר לפחות מטופל אחד להדפסה.");
+
+      const today = new Date();
+      const issueDateStr = formatDateDDMMYYYY(today.toISOString().split('T')[0]);
+      const expDateObj = new Date(today.getTime() + 15 * 86400000);
+      const expDateStr = formatDateDDMMYYYY(expDateObj.toISOString().split('T')[0]);
+
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = '';
+
+      checked.forEach(cb => {
+        const patId = cb.getAttribute('data-patid');
+        const pat = patients.find(p => p.id === patId);
+        const row = cb.closest('tr');
+        const days = parseInt(row.querySelector('.batch-days-input').value) || 28;
+
+        const lines = decomposeSuboxoneTotalMg(pat.defaultDailyMg || 16);
+        const totalDailyMg = pat.defaultDailyMg || 16;
+        const isOver24 = totalDailyMg > 24;
+
+        lines.forEach(line => {
+          const totalFilms = line.filmsPerDay * days;
+          const qtyWords = getFilmsQuantityWordsHebrew(totalFilms);
+
+          const page = document.createElement('div');
+          page.className = 'page-break bg-white text-black font-sans leading-relaxed rtl';
+
+          page.innerHTML = `
+            <div>
+              <div class="border-b-2 border-black pb-2 mb-3 text-center">
+                <h2 class="text-xl font-bold">דרור חיפה - מרכז רפואי לטיפול בהתמכרויות</h2>
+                <p class="text-xs text-slate-700">מבית האגודה לבריאות הציבור ע"ר 580016103 | אופיר 45, חיפה | טל. 04-8677871</p>
+              </div>
+
+              <div class="flex justify-between items-baseline mb-2">
+                <div class="text-sm font-bold">תאריך הוצאה: <span class="font-mono underline">${issueDateStr}</span></div>
+                <div class="text-center font-bold text-base underline">מרשם לתכשיר / סם מסוכן</div>
+                <div class="text-xs font-mono">נוהל 155</div>
+              </div>
+
+              <div class="border border-black p-2.5 mb-3 rounded text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                  <div><b>שם המטופל:</b> <span class="text-base font-bold">${pat.nameHe}</span></div>
+                  <div><b>ת.ז.:</b> <span class="font-mono font-bold">${formatTzDisplay(pat.tz)}</span></div>
+                  <div><b>תאריך לידה:</b> ${pat.birthDate}</div>
+                  <div><b>גיל:</b> ${calculateAge(pat.birthDate)} שנים</div>
+                </div>
+              </div>
+
+              <div class="ltr text-left font-serif text-lg font-bold mb-1">Rp.</div>
+              <div class="border-2 border-black p-3.5 mb-3 rounded-lg">
+                <div class="ltr text-left font-bold text-base font-mono mb-1">${line.nameEn}</div>
+                <div class="text-xs text-slate-900 font-bold font-mono mb-2">חומר פעיל: ${line.inn}</div>
+                <div class="text-sm mb-2">
+                  <b>כמות מנופקת:</b> <span class="font-bold underline text-base">${qtyWords}</span> (לטיפול של ${days} ימים).
+                </div>
+                <div class="text-sm mb-2">
+                  <b>הוראות שימוש:</b> ${line.inst}.
+                </div>
+                <div class="text-xs text-slate-700">
+                  <b>סיבת הארכה מעל 10 ימים:</b> טיפול אחזקתי במחלה כרונית בהתאם לנוהל 155.
+                </div>
+              </div>
+
+              ${isOver24 ? `
+                <div class="border-2 border-black p-2 mb-3 text-xs bg-slate-50">
+                  <b>הודעה מיוחדת בהתאם לסעיף 3.1.9 לנוהל 155 (מינון מעל 24 מ"ג ביממה):</b>
+                  <div>המינון הכולל (${totalDailyMg} מ"ג ביממה) נקבע עקב אי-יעילות מינון נמוך וקיום תלות אופיואידית כרונית ועמידות.</div>
+                  <div>המטופל בעל תעודת בדיקה בתוקף של מרכז גמילה מוכר (תוקף 6 חודשים). המרשם מיועד לתקופה שאינה עולה על חודשיים.</div>
+                </div>
+              ` : ''}
+
+              <div class="text-xs font-bold mb-4">
+                תוקף המרשם: עד לתאריך <span class="font-mono underline font-bold">${expDateStr}</span> (15 ימים בלבד).
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-end border-t border-black pt-3 text-xs mb-3">
+                <div>
+                  <div><b>שם הרופא:</b> ${DOCTOR_DETAILS.name}</div>
+                  <div><b>מס' רישיון:</b> ${DOCTOR_DETAILS.license}</div>
+                </div>
+                <div class="text-center">
+                  <div class="border-b border-dotted border-black w-44 mb-1"></div>
+                  <div>חתימת הרופא וחותמת</div>
+                </div>
+              </div>
+
+              <div class="border-t-2 border-black pt-2 text-[10px] text-center text-black leading-tight">
+                דרור חיפה- אופיר 45, חיפה טל. 04.8677871/ פקס. 04.8660097 drorhaifa@publichealth.org.il<br>
+                אגודה לבריאות הציבור ע"ר – 580016103 טל'. 02.5656900 פקס. 02.6727169 www.aguda.co.il
+              </div>
+            </div>
+          `;
+          printArea.appendChild(page);
+        });
+      });
+
+      saveAllToGoogleSheets("מרשמים הונפקו ונרשמו ביומן!");
+      window.print();
+    }
+
+    // ===========================================================================
+    // СИНХРОНИЗАЦИЯ И УПРАВЛЕНИЕ БАЗОЙ
+    // ===========================================================================
+    async function saveAllToGoogleSheets(customSuccessMessage = "נשמר בהצלחה!") {
+      saveState();
+
+      const url = localStorage.getItem('google_apps_script_url');
+      const key = localStorage.getItem('google_apps_script_key');
+
+      if (!url || !key) {
+        showToast("⚠️ מצב מקומי — הגדר URL לשמירה בענן", "bg-amber-100 text-amber-950 border-amber-400");
+        return;
+      }
+
+      showToast("💾 שומר שינויים בענן Google Sheets...", "bg-blue-100 text-blue-950 border-blue-400");
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            key: key,
+            action: 'saveAllData',
+            patients: patients,
+            visits: visits,
+            prescriptionsLog: prescriptionsLog
+          })
+        });
+        const res = await response.json();
+        if (res.success) {
+          showToast(`✓ ${customSuccessMessage}`, "bg-emerald-100 text-emerald-950 border-emerald-400");
+        } else {
+          showToast("⚠️ שגיאה בשמירה: " + res.error, "bg-rose-100 text-rose-950 border-rose-400");
+        }
+      } catch (err) {
+        showToast("⚠️ שגיאת רשת בשמירה ל-Google Sheets", "bg-rose-100 text-rose-950 border-rose-400");
+      }
+    }
+
+    function showToast(msg, colorClass) {
+      const toast = document.getElementById('saveToast');
+      if (!toast) return;
+      toast.className = `fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl shadow-xl text-xs font-black flex items-center gap-2 border transition-all duration-300 ${colorClass}`;
+      toast.innerHTML = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    async function syncWithGoogleSheets(manual = false) {
+      const url = document.getElementById('settingsUrlInput')?.value.trim() || localStorage.getItem('google_apps_script_url') || '';
+      const key = document.getElementById('settingsKeyInput')?.value.trim() || localStorage.getItem('google_apps_script_key') || '';
+      const badge = document.getElementById('backendStatusBadge');
+
+      if (!url) {
+        badge.innerText = "מצב מקומי";
+        badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-amber-500/30 text-amber-200 font-mono font-bold";
+        return;
+      }
+
+      localStorage.setItem('google_apps_script_url', url);
+      localStorage.setItem('google_apps_script_key', key);
+
+      badge.innerText = "מסנכרן...";
+      badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 font-mono font-bold";
+
+      try {
+        const response = await fetch(`${url}?action=getAllData&key=${encodeURIComponent(key)}`);
+        const res = await response.json();
+        if (res.success && res.data) {
+          if (res.data.patients) patients = res.data.patients;
+          if (res.data.visits) visits = res.data.visits;
+          saveState();
+          renderScheduleList();
+          renderPatientView();
+          
+          const backendVer = res.version || "Online";
+          badge.innerText = `Google Sheets: מחובר ✓ (${backendVer})`;
+          badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-mono font-bold";
+          if (manual) { alert(`סונכרן בהצלחה מול Google Sheets!\nגרסה: ${backendVer}`); closeModalDirect('settingsModal'); }
+        } else {
+          badge.innerText = "שגיאת גישה";
+          badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-rose-500/30 text-rose-300 font-mono font-bold";
+        }
+      } catch (err) {
+        badge.innerText = "אופליין";
+        badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-amber-500/30 text-amber-200 font-mono font-bold";
+      }
+    }
+
+    function openPatientsTableModal() {
+      renderPatientsTableRows();
+      openModalDirect('patientsTableModal');
+    }
+
+    function renderPatientsTableRows() {
+      const tbody = document.getElementById('patientsFullTableBody');
+      tbody.innerHTML = '';
+      const q = document.getElementById('patientTableSearchInput').value.toLowerCase();
+
+      const filtered = patients.filter(p => checkPatientSearchMatch(p, q));
+
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50 transition';
+        tr.innerHTML = `
+          <td class="p-2.5 font-black text-slate-950">${p.nameHe}</td>
+          <td class="p-2.5 font-mono text-slate-700">${formatTzDisplay(p.tz)}</td>
+          <td class="p-2.5 text-slate-700">${formatPhoneDisplay(p.phone)}</td>
+          <td class="p-2.5">${p.birthDate}</td>
+          <td class="p-2.5 font-bold text-slate-800">${p.clinic}</td>
+          <td class="p-2.5 text-slate-600 truncate max-w-[150px]">${p.diagnosis || ''}</td>
+          <td class="p-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold ${p.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-950' : 'bg-slate-200 text-slate-800'}">
+              ${p.status === 'ACTIVE' ? 'פעיל' : 'סיום טיפול'}
+            </span>
+          </td>
+          <td class="p-2.5 text-center">
+            <button onclick="openEditPatientModal('${p.id}')" class="bg-indigo-100 text-indigo-900 hover:bg-indigo-200 px-2.5 py-1 rounded-lg font-bold">
+              ערוך
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openEditPatientModal(patId) {
+      const p = patients.find(x => x.id === patId);
+      if (!p) return;
+      document.getElementById('editPatId').value = p.id;
+      document.getElementById('editPatName').value = p.nameHe || '';
+      document.getElementById('editPatTz').value = p.tz || '';
+      document.getElementById('editPatBirth').value = p.birthDate || '';
+      document.getElementById('editPatPhone').value = p.phone || '';
+      document.getElementById('editPatClinic').value = p.clinic || 'מאוחדת';
+      document.getElementById('editPatDiag').value = p.diagnosis || '';
+      openModalDirect('editPatientModal');
+    }
+
+    function savePatientEditForm() {
+      const id = document.getElementById('editPatId').value;
+      const p = patients.find(x => x.id === id);
+      if (!p) return;
+
+      p.nameHe = document.getElementById('editPatName').value;
+      p.tz = document.getElementById('editPatTz').value;
+      p.birthDate = document.getElementById('editPatBirth').value;
+      p.phone = document.getElementById('editPatPhone').value;
+      p.clinic = document.getElementById('editPatClinic').value;
+      p.diagnosis = document.getElementById('editPatDiag').value;
+
+      closeModalDirect('editPatientModal');
+      saveAllToGoogleSheets("פרטי המטופל עודכנו בהצלחה!");
+      renderPatientsTableRows();
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function openNewPatientModal() {
+      const name = prompt("שם מלא בעברית:");
+      if (!name) return;
+      const tz = prompt("תעודת זהות:", "000000000");
+      const phone = prompt("טלפון:", "");
+      const clinic = prompt("מרפאה (מאוחדת / רמב\"ם / דרור חיפה):", "מאוחדת");
+
+      const newId = "p" + (patients.length + 1);
+      const newP = {
+        id: newId,
+        nameHe: name,
+        tz: tz || '',
+        phone: phone || '',
+        birthDate: "01.01.1926",
+        clinic: clinic || "מאוחדת",
+        diagnosis: "תלות באופיואידים",
+        status: "ACTIVE",
+        defaultDailyMg: 16,
+        defaultDays: 28,
+        dischargeReason: ""
+      };
+      patients.unshift(newP);
+
+      const todayStr = toDateInputFormat(new Date());
+      visits.push({
+        id: "v" + (visits.length + 1),
+        patientId: newId,
+        date: todayStr,
+        time: getNextAvailableTimeSlot(todayStr),
+        status: "SCHEDULED",
+        visitType: "חדש",
+        sub_8: 2,
+        sub_2: 0,
+        sub_daily_mg: 16,
+        sublocade_mg: 0,
+        selincro_qty: 0,
+        days: 28,
+        notes: "ביקור ראשון / קביעת תור",
+        med: 'סובוקסון 16 מ"ג (8מ"ג×2)'
+      });
+
+      selectedPatientId = newId;
+      editingVisitId = null;
+      saveAllToGoogleSheets("מטופל חדש נוצר בהצלחה!");
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function markPatientNoShowNow(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      const nextWeek = toDateInputFormat(d);
+
+      visits.push({
+        id: "v" + (visits.length + 1),
+        patientId: pat.id,
+        date: nextWeek,
+        time: getNextAvailableTimeSlot(nextWeek),
+        status: "SCHEDULED",
+        visitType: "המשך",
+        sub_8: 2,
+        sub_2: 0,
+        sub_daily_mg: pat.defaultDailyMg || 16,
+        sublocade_mg: 0,
+        selincro_qty: 0,
+        days: 28,
+        notes: "הועבר אוטומטית בעקבות אי הגעה",
+        med: 'סובוקסון 16 מ"ג'
+      });
+
+      saveAllToGoogleSheets(`המטופל סומן כלא הגיע. נקבע תור ל-${formatDateDDMMYYYY(nextWeek)}`);
+      renderScheduleList();
+      renderPatientView();
+    }
+
+    function dischargePatientNow(patId) {
+      const pat = patients.find(p => p.id === patId);
+      if (!pat) return;
+      const r = prompt("סיבת סיום טיפול:\n1. אי הגעה ממושכת\n2. חוסר מענה\n3. סיום טיפול מתוכנן", "אי הגעה ממושכת");
+      if (r) {
+        pat.status = 'DISCHARGED';
+        pat.dischargeReason = r;
+        saveAllToGoogleSheets("המטופל הועבר לסטטוס סיום טיפול");
+        renderScheduleList();
+        renderPatientView();
+      }
+    }
+
+    function setScheduleTab(tab) {
+      currentScheduleTab = tab;
+      filterOnlyPatientId = null;
+      ['ACTIVE', 'ALL_HISTORY', 'PATIENT_ONLY', 'ARCHIVE'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (el) el.className = "px-2 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200";
+      });
+      const activeEl = document.getElementById(`tab-${tab}`);
+      if (activeEl) activeEl.className = "px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-950 font-black";
+      renderScheduleList();
+    }
+
+    function changeClinicFilter(val) {
+      currentClinicFilter = val;
+      renderScheduleList();
+    }
+
+    function openPrescriptionLogModal() {
+      const tbody = document.getElementById('prescriptionLogTableBody');
+      tbody.innerHTML = '';
+      prescriptionsLog.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 border font-mono text-xs">${item.date}</td>
+          <td class="p-2 border font-bold">${item.patientName}</td>
+          <td class="p-2 border font-mono">${formatTzDisplay(item.tz)}</td>
+          <td class="p-2 border">${item.medName}</td>
+          <td class="p-2 border text-center font-bold">${item.qty}</td>
+          <td class="p-2 border">${item.doctor}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      openModalDirect('prescriptionLogModal');
+    }
+
+    window.onload = () => {
+      syncWithGoogleSheets(false);
+      renderScheduleList();
+    };
+  </script>
+</body>
+</html>
